@@ -1,0 +1,947 @@
+# Structure documented in "docs/collection-files.md"
+os: macos
+scripting:
+  language: shellscript
+  startCode: |-
+    #!/usr/bin/env bash
+    # {{ $homepage }} — v{{ $version }} — {{ $date }}
+    if [ "$EUID" -ne 0 ]; then
+        script_path=$([[ "$0" = /* ]] && echo "$0" || echo "$PWD/${0#./}")
+        sudo "$script_path" || (
+            echo 'Administrator privileges are required.'
+            exit 1
+        )
+        exit 0
+    fi
+  endCode: |-
+    echo 'Your privacy and security is now hardened 🎉💪'
+    echo 'Press any key to exit.'
+    read -n 1 -s
+actions:
+  - category: Privacy cleanup
+    children:
+      - category: Clear terminal history
+        children:
+          - name: Clear bash history
+            recommend: standard
+            code: rm -f ~/.bash_history
+          - name: Clear zsh history
+            recommend: standard
+            code: rm -f ~/.zsh_history
+      - name: Clear CUPS printer job cache
+        recommend: strict
+        code: |-
+          sudo rm -rfv /var/spool/cups/c0*
+          sudo rm -rfv /var/spool/cups/tmp/*
+          sudo rm -rfv /var/spool/cups/cache/job.cache*
+      - name: Empty trash on all volumes
+        recommend: strict
+        code: |-
+          # on all mounted volumes
+          sudo rm -rfv /Volumes/*/.Trashes/* &>/dev/null
+          # on main HDD
+          sudo rm -rfv ~/.Trash/* &>/dev/null
+      - name: Clear system cache files
+        recommend: strict
+        code: |-
+          sudo rm -rfv /Library/Caches/* &>/dev/null
+          sudo rm -rfv /System/Library/Caches/* &>/dev/null
+          sudo rm -rfv ~/Library/Caches/* &>/dev/null
+      - category: Clear OS logs
+        recommend: strict
+        children:
+          - category: Clear unified logs (diagnostics)
+            docs: https://developer.apple.com/documentation/os/logging
+            children:
+              - name: Clear diagnostics logs
+                docs: https://eclecticlight.co/2017/10/10/inside-the-macos-log-logd-and-the-files-that-it-manages/
+                code: |-
+                  sudo rm -rfv /private/var/db/diagnostics/*
+                  sudo rm -rfv /var/db/diagnostics/*
+              - name: Clear shared-cache strings data
+                docs:
+                  - https://eclecticlight.co/2017/09/23/sierras-unified-log-evolves-more-persistent-and-a-valuable-log-log/
+                  - https://github.com/privacysexy-forks/dtformats/blob/main/documentation/Apple%20Unified%20Logging%20and%20Activity%20Tracing%20formats.asciidoc
+                code: |-
+                  sudo rm -rfv /private/var/db/uuidtext/
+                  sudo rm -rfv /var/db/uuidtext/
+          - category: Clear system logs (/var/log/)
+            children:
+              - name: Clear Apple System Logs (ASL)
+                docs:
+                  - https://papers.put.as/papers/macosx/2012/Mac_Log_Analysis_Sarah_Edwards_DFIRSummit2012.pdf
+                  - https://apple.stackexchange.com/questions/98197/is-it-safe-to-delete-system-logs
+                code: |-
+                  sudo rm -rfv /private/var/log/asl/*
+                  sudo rm -rfv /var/log/asl/*
+                  sudo rm -fv /var/log/asl.log # Legacy ASL (10.4)
+                  sudo rm -fv /var/log/asl.db
+              - name: Clear install logs
+                docs: https://discussions.apple.com/thread/1829842
+                code: sudo rm -fv /var/log/install.log
+              - name: Clear all system logs
+                docs: https://www.howtogeek.com/356942/how-to-view-the-system-log-on-a-mac/
+                code: sudo rm -rfv /var/log/* # Clears including /var/log/system.log
+          - name: Clear system application logs
+            docs: https://papers.put.as/papers/macosx/2012/Mac_Log_Analysis_Sarah_Edwards_DFIRSummit2012.pdf
+            code: sudo rm -rfv /Library/Logs/*
+          - name: Clear Mail logs
+            code: rm -rfv ~/Library/Containers/com.apple.mail/Data/Library/Logs/Mail/*
+          - name: Clear audit logs (login, logout, authentication and other user activity)
+            docs:
+              - https://papers.put.as/papers/macosx/2012/Mac_Log_Analysis_Sarah_Edwards_DFIRSummit2012.pdf
+              - http://macadmins.psu.edu/wp-content/uploads/sites/24696/2016/06/psumac2016-19-osxlogs_macadmins_2016.pdf
+            code: |-
+              sudo rm -rfv /var/audit/*
+              sudo rm -rfv /private/var/audit/*
+          - name: Clear user logs (user reports)
+            docs:
+              - https://www.howtogeek.com/356942/how-to-view-the-system-log-on-a-mac/
+              - https://apple.stackexchange.com/questions/272929/is-it-safe-to-delete-the-content-of-library-logs
+            code: sudo rm -rfv ~/Library/Logs/*
+          - name: Clear daily logs
+            docs: https://salt4n6.com/2018/12/11/mac-os-daily-logs/
+            code: sudo rm -fv /System/Library/LaunchDaemons/com.apple.periodic-*.plist
+          - name: Clear receipt logs for installed packages/apps
+            docs:
+              - https://apple.stackexchange.com/questions/327174/whats-the-purpose-of-directory-private-var-db-receipts
+              - https://papers.put.as/papers/macosx/2012/Mac_Log_Analysis_Sarah_Edwards_DFIRSummit2012.pdf
+            code: |-
+              sudo rm -rfv /var/db/receipts/*
+              sudo rm -vf /Library/Receipts/InstallHistory.plist
+      - category: Clear browser history
+        children:
+          - category: Clear Google Chrome history
+            children:
+              - name: Clear Google Chrome browsing history
+                code: |-
+                  rm -rfv ~/Library/Application\ Support/Google/Chrome/Default/History &>/dev/null
+                  rm -rfv ~/Library/Application\ Support/Google/Chrome/Default/History-journal &>/dev/null
+              - name: Google Chrome Cache Files
+                code: sudo rm -rfv ~/Library/Application\ Support/Google/Chrome/Default/Application\ Cache/* &>/dev/null
+          - category: Clear Safari history
+            children:
+              - name: Clear Safari browsing history
+                docs:
+                  - https://discussions.apple.com/thread/7586106?answerId=30314600022#30314600022
+                  - https://davidkoepi.wordpress.com/2013/04/20/safariforensic/
+                code: |-
+                  rm -f ~/Library/Safari/History.db
+                  rm -f ~/Library/Safari/History.db-lock
+                  rm -f ~/Library/Safari/History.db-shm
+                  rm -f ~/Library/Safari/History.db-wal
+                  # For older versions of Safari
+                  rm -f ~/Library/Safari/History.plist # URL, visit count, webpage title, last visited timestamp, redirected URL, autocomplete
+                  rm -f ~/Library/Safari/HistoryIndex.sk # History index
+              - name: Clear Safari downloads history
+                docs: https://blog.d204n6.com/2020/09/macos-safari-preferences-and-privacy.html
+                code: rm -f ~/Library/Safari/Downloads.plist
+              - name: Clear Safari top sites
+                docs: https://davidkoepi.wordpress.com/2013/04/20/safariforensic/
+                code: rm -f ~/Library/Safari/TopSites.plist
+              - name: Clear Safari last session (open tabs) history
+                docs:
+                  - https://apple.stackexchange.com/a/374116
+                  - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2013-7127
+                code: rm -f ~/Library/Safari/LastSession.plist
+              - category: Clear Safari caches
+                children:
+                  - name: Clear Safari cached blobs, URLs and timestamps
+                    docs: https://davidkoepi.wordpress.com/2013/04/20/safariforensic/
+                    code: rm -f ~/Library/Caches/com.apple.Safari/Cache.db
+                  - name: Clear Safari web page icons displayed on URL bar
+                    docs:
+                      - https://davidkoepi.wordpress.com/2013/04/20/safariforensic/
+                      - https://lifehacker.com/safaris-private-browsing-mode-saves-urls-in-an-easily-a-1691944343
+                    code: rm -f ~/Library/Safari/WebpageIcons.db
+                  - name: Clear Safari webpage previews (thumbnails)
+                    docs:
+                      - https://davidkoepi.wordpress.com/2013/04/20/safariforensic/
+                      - https://www.reddit.com/r/apple/comments/18lp92/your_apple_computer_keeps_a_screen_shot_of_nearly/
+                    code: rm -rfv ~/Library/Caches/com.apple.Safari/Webpage\ Previews
+              - name: Clear copy of the Safari history
+                docs: https://forensicsfromthesausagefactory.blogspot.com/2010/06/safari-history-spotlight-webhistory.html
+                code: rm -rfv ~/Library/Caches/Metadata/Safari/History
+              - name: Clear search history embedded in Safari preferences
+                docs: https://krypted.com/tag/recentsearchstrings/
+                code: defaults write ~/Library/Preferences/com.apple.Safari RecentSearchStrings '( )'
+              - name: Clear Safari cookies
+                docs:
+                  - https://www.toolbox.com/tech/operating-systems/blogs/understanding-the-safari-cookiesbinarycookies-file-format-010712/
+                  - https://link.springer.com/content/pdf/10.1007/0-387-36891-4_13.pdf
+                code: |-
+                  rm -f ~/Library/Cookies/Cookies.binarycookies
+                  # Used before Safari 5.1
+                  rm -f ~/Library/Cookies/Cookies.plist
+              - name: Clear Safari zoom level preferences per site
+                docs: https://blog.d204n6.com/2020/09/macos-safari-preferences-and-privacy.html
+                code: rm -f ~/Library/Safari/PerSiteZoomPreferences.plist
+              - name: Clear URLs that are allowed to display notifications in Safari
+                docs: https://blog.d204n6.com/2020/09/macos-safari-preferences-and-privacy.html
+                code: rm -f ~/Library/Safari/UserNotificationPreferences.plist
+              - name: Clear Safari per-site preferences for Downloads, Geolocation, PopUps, and Autoplays
+                docs: https://blog.d204n6.com/2020/09/macos-safari-preferences-and-privacy.html
+                code: rm -f ~/Library/Safari/PerSitePreferences.db
+          - category: Clear Firefox history
+            children:
+              - name: Clear Firefox cache
+                code: |-
+                  sudo rm -rf ~/Library/Caches/Mozilla/
+                  rm -fv ~/Library/Application\ Support/Firefox/Profiles/*/netpredictions.sqlite
+              - name: Delete Firefox form history
+                code: |-
+                  rm -fv ~/Library/Application\ Support/Firefox/Profiles/*/formhistory.sqlite
+                  rm -fv ~/Library/Application\ Support/Firefox/Profiles/*/formhistory.dat
+              - name: Delete Firefox site preferences
+                code: rm -fv ~/Library/Application\ Support/Firefox/Profiles/*/content-prefs.sqlite
+              - name: Delete Firefox session restore data (loads after the browser closes or crashes)
+                code: |-
+                  rm -fv ~/Library/Application\ Support/Firefox/Profiles/*/sessionCheckpoints.json
+                  rm -fv ~/Library/Application\ Support/Firefox/Profiles/*/sessionstore*.js*
+                  rm -fv ~/Library/Application\ Support/Firefox/Profiles/*/sessionstore.bak*
+                  rm -fv ~/Library/Application\ Support/Firefox/Profiles/*/sessionstore-backups/previous.js*
+                  rm -fv ~/Library/Application\ Support/Firefox/Profiles/*/sessionstore-backups/recovery.js*
+                  rm -fv ~/Library/Application\ Support/Firefox/Profiles/*/sessionstore-backups/recovery.bak*
+                  rm -fv ~/Library/Application\ Support/Firefox/Profiles/*/sessionstore-backups/previous.bak*
+                  rm -fv ~/Library/Application\ Support/Firefox/Profiles/*/sessionstore-backups/upgrade.js*-20*
+              - name: Delete Firefox passwords
+                docs: https://web.archive.org/web/20210425202923/http://kb.mozillazine.org/Password_Manager
+                code: |-
+                  rm -fv ~/Library/Application\ Support/Firefox/Profiles/*/signons.txt
+                  rm -fv ~/Library/Application\ Support/Firefox/Profiles/*/signons2.txt
+                  rm -fv ~/Library/Application\ Support/Firefox/Profiles/*/signons3.txt
+                  rm -fv ~/Library/Application\ Support/Firefox/Profiles/*/signons.sqlite
+                  rm -fv ~/Library/Application\ Support/Firefox/Profiles/*/logins.json
+              - name: Delete Firefox HTML5 cookies
+                code: rm -fv ~/Library/Application\ Support/Firefox/Profiles/*/webappsstore.sqlite
+              - name: Delete Firefox crash reports
+                code: |-
+                  rm -rfv ~/Library/Application\ Support/Firefox/Crash\ Reports/
+                  rm -fv ~/Library/Application\ Support/Firefox/Profiles/*/minidumps/*.dmp
+              - name: Delete Firefox backup files
+                code: |-
+                  rm -fv ~/Library/Application\ Support/Firefox/Profiles/*/bookmarkbackups/*.json
+                  rm -fv ~/Library/Application\ Support/Firefox/Profiles/*/bookmarkbackups/*.jsonlz4
+              - name: Delete Firefox cookies
+                code: |-
+                  rm -fv ~/Library/Application\ Support/Firefox/Profiles/*/cookies.txt
+                  rm -fv ~/Library/Application\ Support/Firefox/Profiles/*/cookies.sqlite
+                  rm -fv ~/Library/Application\ Support/Firefox/Profiles/*/cookies.sqlite-shm
+                  rm -fv ~/Library/Application\ Support/Firefox/Profiles/*/cookies.sqlite-wal
+                  rm -rfv ~/Library/Application\ Support/Firefox/Profiles/*/storage/default/http*
+      - category: Clear third party application data
+        children:
+          - name: Clear Adobe cache
+            recommend: standard
+            code: sudo rm -rfv ~/Library/Application\ Support/Adobe/Common/Media\ Cache\ Files/* &>/dev/null
+          - name: Clear Gradle cache
+            recommend: strict
+            code: |-
+              if [ -d "/Users/${HOST}/.gradle/caches" ]; then
+                  rm -rfv ~/.gradle/caches/ &> /dev/null
+              fi
+          - name: Clear Dropbox cache
+            recommend: standard
+            code: |-
+              if [ -d "/Users/${HOST}/Dropbox" ]; then
+                  sudo rm -rfv ~/Dropbox/.dropbox.cache/* &>/dev/null
+              fi
+          - name: Clear Google Drive file stream cache
+            recommend: standard
+            code: |-
+              killall "Google Drive File Stream"
+              rm -rfv ~/Library/Application\ Support/Google/DriveFS/[0-9a-zA-Z]*/content_cache &>/dev/null
+          - name: Clear Composer cache
+            recommend: strict
+            code: |-
+              if type "composer" &> /dev/null; then
+                  composer clearcache &> /dev/null
+              fi
+          - name: Clear Homebrew cache
+            recommend: strict
+            code: |-
+              if type "brew" &>/dev/null; then
+                  brew cleanup -s &>/dev/null
+                  rm -rfv $(brew --cache) &>/dev/null
+                  brew tap --repair &>/dev/null
+              fi
+          - name: Clear any old versions of Ruby gems
+            recommend: strict
+            code: |-
+              if type "gem" &> /dev/null; then
+                  gem cleanup &>/dev/null
+              fi
+          - name: Clear Docker
+            recommend: strict
+            code: |-
+              if type "docker" &> /dev/null; then
+                  docker system prune -af
+              fi
+          - name: Clear Pyenv-VirtualEnv cache
+            recommend: strict
+            code: |-
+              if [ "$PYENV_VIRTUALENV_CACHE_PATH" ]; then
+                  rm -rfv $PYENV_VIRTUALENV_CACHE_PATH &>/dev/null
+              fi
+          - name: Clear NPM cache
+            recommend: strict
+            code: |-
+              if type "npm" &> /dev/null; then
+                  npm cache clean --force
+              fi
+          - name: Clear Yarn cache
+            recommend: strict
+            code: |-
+              if type "yarn" &> /dev/null; then
+                  echo 'Cleanup Yarn Cache...'
+                  yarn cache clean --force
+              fi
+      - category: iOS Cleanup
+        children:
+          - name: Clear iOS applications
+            recommend: strict
+            code: rm -rfv ~/Music/iTunes/iTunes\ Media/Mobile\ Applications/* &>/dev/null
+          - name: Clear iOS photo caches
+            recommend: standard
+            code: rm -rf ~/Pictures/iPhoto\ Library/iPod\ Photo\ Cache/*
+          - name: Remove iOS Device Backups
+            recommend: strict
+            code: rm -rfv ~/Library/Application\ Support/MobileSync/Backup/* &>/dev/null
+          - name: Clear iOS Simulators
+            recommend: strict
+            code: |-
+              if type "xcrun" &>/dev/null; then
+                  osascript -e 'tell application "com.apple.CoreSimulator.CoreSimulatorService" to quit'
+                  osascript -e 'tell application "iOS Simulator" to quit'
+                  osascript -e 'tell application "Simulator" to quit'
+                  xcrun simctl shutdown all
+                  xcrun simctl erase all
+              fi
+          - name: Clear the list of iOS devices connected
+            recommend: strict
+            code: |-
+              sudo defaults delete /Users/$USER/Library/Preferences/com.apple.iPod.plist "conn:128:Last Connect"
+              sudo defaults delete /Users/$USER/Library/Preferences/com.apple.iPod.plist Devices
+              sudo defaults delete /Library/Preferences/com.apple.iPod.plist "conn:128:Last Connect"
+              sudo defaults delete /Library/Preferences/com.apple.iPod.plist Devices
+              sudo rm -rfv /var/db/lockdown/*
+      - name: Clear XCode Derived Data and Archives
+        recommend: strict
+        code: |-
+          rm -rfv ~/Library/Developer/Xcode/DerivedData/* &>/dev/null
+          rm -rfv ~/Library/Developer/Xcode/Archives/* &>/dev/null
+          rm -rfv ~/Library/Developer/Xcode/iOS Device Logs/* &>/dev/null
+      - name: Clear DNS cache
+        recommend: standard
+        code: |-
+          sudo dscacheutil -flushcache
+          sudo killall -HUP mDNSResponder
+      - name: Purge inactive memory
+        recommend: standard
+        code: sudo purge
+      - category: Reset privacy permissions for all applications
+        children:
+          - name: Reset camera permissions
+            code: tccutil reset Camera
+          - name: Reset microphone permissions
+            code: tccutil reset Microphone
+          - name: Reset accessibility permissions
+            code: tccutil reset Accessibility
+          - name: Reset screen capture permissions
+            code: tccutil reset ScreenCapture
+          - name: Reset reminders permissions
+            code: tccutil reset Reminders
+          - name: Reset photos permissions
+            code: tccutil reset Photos
+          - name: Reset calendar permissions
+            code: tccutil reset Calendar
+          - name: Reset full disk access permissions
+            code: tccutil reset SystemPolicyAllFiles
+          - name: Reset contacts permissions
+            code: tccutil reset SystemPolicyAllFiles
+          - name: Reset desktop folder permissions
+            code: tccutil reset SystemPolicyDesktopFolder
+          - name: Reset documents folder permissions
+            code: tccutil reset SystemPolicyDocumentsFolder
+          - name: Reset downloads permissions
+            code: tccutil reset SystemPolicyDownloadsFolder
+          - name: Reset all app permissions
+            code: tccutil reset All
+  - category: Configure programs
+    children:
+      - name: Disable Firefox telemetry
+        recommend: standard
+        docs: https://github.com/privacysexy-forks/policy-templates/blob/master/README.md
+        code: |-
+          # Enable Firefox policies so the telemetry can be configured.
+          sudo defaults write /Library/Preferences/org.mozilla.firefox EnterprisePoliciesEnabled -bool TRUE
+          # Disable sending usage data
+          sudo defaults write /Library/Preferences/org.mozilla.firefox DisableTelemetry -bool TRUE
+        revertCode: |-
+          sudo defaults delete /Library/Preferences/org.mozilla.firefox EnterprisePoliciesEnabled
+          sudo defaults delete /Library/Preferences/org.mozilla.firefox DisableTelemetry
+      - name: Disable Microsoft Office diagnostics data sending
+        recommend: standard
+        code: defaults write com.microsoft.office DiagnosticDataTypePreference -string ZeroDiagnosticData
+        revertCode: defaults delete com.microsoft.office DiagnosticDataTypePreference
+      - name: Uninstall Google update
+        recommend: strict
+        code: |-
+          googleUpdateFile=~/Library/Google/GoogleSoftwareUpdate/GoogleSoftwareUpdate.bundle/Contents/Resources/ksinstall
+          if [ -f "$googleUpdateFile" ]; then
+              $googleUpdateFile --nuke
+              echo Uninstalled google update
+          else
+              echo Google update file does not exist
+          fi
+      - name: Disable Homebrew user behavior analytics
+        recommend: standard
+        docs: https://docs.brew.sh/Analytics
+        call:
+          - function: PersistUserEnvironmentConfiguration
+            parameters:
+              configuration: export HOMEBREW_NO_ANALYTICS=1
+      - name: Disable NET Core CLI telemetry
+        recommend: standard
+        call:
+          - function: PersistUserEnvironmentConfiguration
+            parameters:
+              configuration: export DOTNET_CLI_TELEMETRY_OPTOUT=1
+      - name: Disable PowerShell Core telemetry
+        recommend: standard
+        docs: https://github.com/privacysexy-forks/PowerShell/blob/v7.1.5/README.md#telemetry
+        call:
+          - function: PersistUserEnvironmentConfiguration
+            parameters:
+              configuration: export POWERSHELL_TELEMETRY_OPTOUT=1
+  - category: Configure OS
+    children:
+      - category: Configure Apple Remote Desktop
+        children:
+          - name: Deactivate the Remote Management Service
+            recommend: strict
+            code: sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -deactivate -stop
+            revertCode: sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -activate -restart -agent -console
+          - name: Remove Apple Remote Desktop Settings
+            recommend: strict
+            code: |-
+              sudo rm -rf /var/db/RemoteManagement
+              sudo defaults delete /Library/Preferences/com.apple.RemoteDesktop.plist
+              defaults delete ~/Library/Preferences/com.apple.RemoteDesktop.plist
+              sudo rm -r /Library/Application\ Support/Apple/Remote\ Desktop/ 
+              rm -r ~/Library/Application\ Support/Remote\ Desktop/
+              rm -r ~/Library/Containers/com.apple.RemoteDesktop
+      - name: Disable Internet based spell correction
+        code: defaults write NSGlobalDomain WebAutomaticSpellingCorrectionEnabled -bool false
+        revertCode: defaults delete NSGlobalDomain WebAutomaticSpellingCorrectionEnabled
+      - name: Disable Remote Apple Events
+        recommend: strict
+        code: sudo systemsetup -setremoteappleevents off
+        revertCode: sudo systemsetup -setremoteappleevents on
+      - name: Do not store documents to iCloud Drive by default
+        docs: https://macos-defaults.com/finder/nsdocumentsavenewdocumentstocloud.html
+        recommend: standard
+        code: defaults write NSGlobalDomain NSDocumentSaveNewDocumentsToCloud -bool false
+        revertCode: defaults delete NSGlobalDomain NSDocumentSaveNewDocumentsToCloud
+      - name: Do not show recent items on dock
+        docs: https://developer.apple.com/documentation/devicemanagement/dock
+        code: defaults write com.apple.dock show-recents -bool false
+        revertCode: defaults delete com.apple.dock show-recents
+      - name: Disable AirDrop file sharing
+        recommend: strict
+        code: defaults write com.apple.NetworkBrowser DisableAirDrop -bool true
+        revertCode: defaults write com.apple.NetworkBrowser DisableAirDrop -bool false
+      - category: Configure Siri
+        children:
+          - name: Opt-out from Siri data collection
+            recommend: standard
+            code: defaults write com.apple.assistant.support 'Siri Data Sharing Opt-In Status' -int 2
+            revertCode: defaults delete com.apple.assistant.support 'Siri Data Sharing Opt-In Status'
+          - category: Disable Siri
+            children:
+              - name: Disable "Ask Siri"
+                recommend: strict
+                docs: https://derflounder.wordpress.com/2016/09/20/blocking-siri-on-macos-sierra/
+                code: defaults write com.apple.assistant.support 'Assistant Enabled' -bool false
+                revertCode: defaults write com.apple.assistant.support 'Assistant Enabled' -bool true
+              - name: Disable Siri voice feedback
+                recommend: strict
+                docs:
+                  - https://github.com/privacysexy-forks/starter/blob/master/system/siri.sh
+                  - https://machippie.github.io/system/
+                code: defaults write com.apple.assistant.backedup 'Use device speaker for TTS' -int 3
+                revertCode: defaults write com.apple.assistant.backedup 'Use device speaker for TTS' -int 2
+              - name: Disable Siri services (Siri and assistantd)
+                recommend: strict
+                docs:
+                  - https://apple.stackexchange.com/questions/57514/what-is-assistantd
+                  - https://www.jamf.com/jamf-nation/discussions/22757/kill-siri#responseChild137563
+                  - https://apple.stackexchange.com/a/370426
+                # To see status: • `launchctl print-disabled system` • `launchctl print-disabled user/$UID` • `launchctl print-disabled gui/$UID`
+                code: |-
+                  launchctl disable "user/$UID/com.apple.assistantd"
+                  launchctl disable "gui/$UID/com.apple.assistantd"
+                  sudo launchctl disable 'system/com.apple.assistantd'
+                  launchctl disable "user/$UID/com.apple.Siri.agent"
+                  launchctl disable "gui/$UID/com.apple.Siri.agent"
+                  sudo launchctl disable 'system/com.apple.Siri.agent'
+                  if [ $(/usr/bin/csrutil status | awk '/status/ {print $5}' | sed 's/\.$//') = "enabled" ]; then
+                      >&2 echo 'This script requires SIP to be disabled. Read more: https://developer.apple.com/documentation/security/disabling_and_enabling_system_integrity_protection'
+                  fi
+                revertCode: |-
+                  launchctl enable "user/$UID/com.apple.assistantd"
+                  launchctl enable "gui/$UID/com.apple.assistantd"
+                  sudo launchctl enable 'system/com.apple.assistantd'
+                  launchctl enable "user/$UID/com.apple.Siri.agent"
+                  launchctl enable "gui/$UID/com.apple.Siri.agent"
+                  sudo launchctl enable 'system/com.apple.Siri.agent'
+                  if [ $(/usr/bin/csrutil status | awk '/status/ {print $5}' | sed 's/\.$//') = "enabled" ]; then
+                      >&2 echo 'This script requires SIP to be disabled. Read more: https://developer.apple.com/documentation/security/disabling_and_enabling_system_integrity_protection''
+                  fi
+              - name: Disable "Do you want to enable Siri?" pop-up
+                docs:
+                  - https://discussions.apple.com/thread/7694127?answerId=30752577022#30752577022
+                  - https://windowsreport.com/mac/siri-keeps-popping-up/
+                  - https://www.jamf.com/jamf-nation/discussions/21783/disable-siri-setup-assistant-in-macos-sierra#responseChild131588
+                code: defaults write com.apple.SetupAssistant 'DidSeeSiriSetup' -bool True
+                revertCode: defaults delete com.apple.SetupAssistant 'DidSeeSiriSetup'
+          - category: Hide Siri
+            children:
+              - name: Hide Siri from menu bar
+                recommend: strict
+                code: defaults write com.apple.systemuiserver 'NSStatusItem Visible Siri' 0
+                revertCode: defaults write com.apple.systemuiserver 'NSStatusItem Visible Siri' 1
+              - name: Hide Siri from status menu
+                recommend: strict
+                docs: https://derflounder.wordpress.com/2016/09/20/blocking-siri-on-macos-sierra/
+                code: |-
+                  defaults write com.apple.Siri 'StatusMenuVisible' -bool false
+                  defaults write com.apple.Siri 'UserHasDeclinedEnable' -bool true
+                revertCode: |-
+                  defaults delete com.apple.Siri 'StatusMenuVisible'
+                  defaults delete com.apple.Siri 'UserHasDeclinedEnable'
+      - name: Disable Spotlight indexing
+        code: sudo mdutil -i off -d /
+        revertCode: sudo mdutil -i on /
+  - category: Security improvements
+    children:
+      - category: Configure macOS Application Firewall
+        children:
+          - name: Enable application firewall
+            recommend: standard
+            docs:
+              - https://www.stigviewer.com/stig/apple_os_x_10.13/2018-10-01/finding/V-81681
+              - https://daiderd.com/nix-darwin/manual/index.html
+              - https://developer.apple.com/documentation/devicemanagement/firewall
+            code: |-
+              /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on
+              sudo defaults write /Library/Preferences/com.apple.alf globalstate -bool true
+              defaults write com.apple.security.firewall EnableFirewall -bool true
+            revertCode: |-
+              /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
+              sudo defaults write /Library/Preferences/com.apple.alf globalstate -bool false
+              defaults write com.apple.security.firewall EnableFirewall -bool false
+          - name: Turn on firewall logging
+            recommend: standard
+            docs:
+              - https://www.stigviewer.com/stig/apple_os_x_10.13/2018-10-01/finding/V-81671
+              - https://daiderd.com/nix-darwin/manual/index.html
+            code: |-
+              /usr/libexec/ApplicationFirewall/socketfilterfw --setloggingmode on
+              sudo defaults write /Library/Preferences/com.apple.alf loggingenabled -bool true
+            revertCode: |-
+              /usr/libexec/ApplicationFirewall/socketfilterfw --setloggingmode off
+              sudo defaults write /Library/Preferences/com.apple.alf loggingenabled -bool false
+          - name: Turn on stealth mode
+            recommend: standard
+            docs:
+              - https://www.stigviewer.com/stig/apple_os_x_10.8_mountain_lion_workstation/2015-02-10/finding/V-51327
+              - https://daiderd.com/nix-darwin/manual/index.html
+              - https://developer.apple.com/documentation/devicemanagement/firewall
+            code: |-
+              /usr/libexec/ApplicationFirewall/socketfilterfw --setstealthmode on
+              sudo defaults write /Library/Preferences/com.apple.alf stealthenabled -bool true
+              defaults write com.apple.security.firewall EnableStealthMode -bool true
+            revertCode: |-
+              /usr/libexec/ApplicationFirewall/socketfilterfw --setstealthmode off
+              sudo defaults write /Library/Preferences/com.apple.alf stealthenabled -bool false
+              defaults write com.apple.security.firewall EnableStealthMode -bool false
+          - category: Disable auto-permitting incoming traffic for apps
+            children:
+              - name: Prevent automatically allowing incoming connections to signed apps
+                docs: https://daiderd.com/nix-darwin/manual/index.html
+                recommend: strict
+                code: sudo defaults write /Library/Preferences/com.apple.alf allowsignedenabled -bool false
+                revertCode: sudo defaults write /Library/Preferences/com.apple.alf allowsignedenabled -bool true
+              - name: Prevent automatically allowing incoming connections to downloaded signed apps
+                docs: https://daiderd.com/nix-darwin/manual/index.html
+                recommend: strict
+                code: sudo defaults write /Library/Preferences/com.apple.alf allowdownloadsignedenabled -bool false
+                revertCode: sudo defaults write /Library/Preferences/com.apple.alf allowdownloadsignedenabled -bool true
+      - name: Disable Captive portal
+        # An attacker could trigger the utility and direct a Mac to a site with malware without user interaction,
+        # so it's best to disable this feature and log in to captive portals using regular Web browser instead.
+        recommend: standard
+        docs:
+          # Risks with captive portals:
+          - https://www.eff.org/deeplinks/2017/08/how-captive-portals-interfere-wireless-security-and-privacy
+          # More about apple Captive portal:
+          - https://web.archive.org/web/20171008071031if_/http://blog.erratasec.com/2010/09/apples-secret-wispr-request.html#.WdnPa5OyL6Y
+          - https://web.archive.org/web/20130407200745/http://www.divertednetworks.net/apple-captiveportal.html
+          - https://web.archive.org/web/20170622064304/https://grpugh.wordpress.com/2014/10/29/an-undocumented-change-to-captive-network-assistant-settings-in-os-x-10-10-yosemite/
+        code: sudo defaults write /Library/Preferences/SystemConfiguration/com.apple.captive.control.plist Active -bool false
+        revertCode: sudo defaults delete /Library/Preferences/SystemConfiguration/com.apple.captive.control.plist Active
+      - category: Use screen saver for protection
+        children:
+          - name: Require a password to wake the computer from sleep or screen saver
+            # The screen saver acts as a session lock and prevents unauthorized users from accessing the current user's account.
+            docs: https://www.stigviewer.com/stig/apple_macos_11_big_sur/2020-11-27/finding/V-230744
+            code: sudo defaults write /Library/Preferences/com.apple.screensaver askForPassword -bool true
+            revertCode: sudo defaults delete /Library/Preferences/com.apple.screensaver askForPassword
+          - name: Initiate session lock five seconds after screen saver is started
+            docs: https://www.stigviewer.com/stig/apple_macos_11_big_sur/2020-11-27/finding/V-230745
+            # An unattended system with an excessive grace period is vulnerable to a malicious user.
+            code: sudo defaults write /Library/Preferences/com.apple.screensaver 'askForPasswordDelay' -int 5
+            revertCode: sudo defaults delete /Library/Preferences/com.apple.screensaver 'askForPasswordDelay'
+      - category: Disable guest accounts
+        docs:
+          - https://www.stigviewer.com/stig/apple_macos_11_big_sur/2021-06-16/finding/V-230823
+          - https://www.stigviewer.com/stig/apple_os_x_10.13/2018-10-01/finding/V-81615
+        children:
+          - name: Disables signing in as Guest from the login screen
+            code: sudo defaults write /Library/Preferences/com.apple.loginwindow GuestEnabled -bool NO
+            revetCode: sudo defaults write /Library/Preferences/com.apple.loginwindow GuestEnabled -bool YES
+          - name: Disables Guest access to file shares over AF
+            code: sudo defaults write /Library/Preferences/SystemConfiguration/com.apple.smb.server AllowGuestAccess -bool NO
+            revetCode: sudo defaults write /Library/Preferences/SystemConfiguration/com.apple.smb.server AllowGuestAccess -bool YES
+          - name: Disables Guest access to file shares over SMB
+            code: sudo defaults write /Library/Preferences/com.apple.AppleFileServer guestAccess -bool NO
+            revetCode: sudo defaults write /Library/Preferences/com.apple.AppleFileServer guestAccess -bool YES
+      - category: Prevent unauthorized connections
+        children:
+          - name: Disable remote login (incoming SSH and SFTP connections)
+            recommend: standard
+            docs: https://osxdaily.com/2016/08/16/enable-ssh-mac-command-line/
+            # Check if enabled: sudo systemsetup -getremotelogin, returns "Remote Login: On" or "Off"
+            code: echo 'yes' | sudo systemsetup -setremotelogin off
+            revertCode: sudo systemsetup -setremotelogin on
+          - name: Disable insecure TFTP service
+            recommend: standard
+            # If the system does not require Trivial File Transfer Protocol (TFTP), then support for
+            # it is non-essential and should be disabled. The information system should be configured to
+            # provide only essential capabilities. Disabling TFTP helps prevent the unauthorized connection
+            # of devices and the unauthorized transfer of information.
+            docs: https://www.stigviewer.com/stig/apple_macos_11_big_sur/2021-06-16/finding/V-230813
+            code: sudo launchctl disable 'system/com.apple.tftpd'
+            revertCode: sudo launchctl enable 'system/com.apple.tftpd'
+          - name: Disable Bonjour multicast advertising
+            recommend: standard
+            docs: https://www.stigviewer.com/stig/apple_os_x_10.11/2017-04-06/finding/V-67593
+            code: sudo defaults write /Library/Preferences/com.apple.mDNSResponder.plist NoMulticastAdvertisements -bool true
+            revertCode: sudo defaults write /Library/Preferences/com.apple.mDNSResponder.plist NoMulticastAdvertisements -bool false
+          - name: Disable insecure telnet protocol
+            recommend: standard
+            docs:
+              - https://www.stigviewer.com/stig/apple_os_x_10.13/2020-09-11/finding/V-214882
+              - https://www.stigviewer.com/stig/apple_os_x_10.10_yosemite_workstation/2017-04-06/finding/V-59671
+            code: sudo launchctl disable system/com.apple.telnetd
+            revertCode: sudo launchctl enable system/com.apple.telnetd
+      - category: Disable printer sharing (IPP, LDP, SMB and Bonjour protocols)
+        # Used typically for servers
+        # By default, the CUPS only listens to requests from the machine that it's running on
+        # cupsctl is a tool to manage the configuration of the CUPS daemon
+        docs:
+          - https://www.cups.org/doc/sharing.html
+          - https://www.cups.org/doc/security.html # Security risks
+        children:
+          - name: Disable sharing of local printers with other computers
+            recommend: standard
+            docs: https://www.cups.org/doc/man-cupsctl.html
+            code: cupsctl --no-share-printers
+            revertCode: cupsctl --share-printers
+          - name: Disable printing from any address including the Internet
+            recommend: standard
+            docs: https://www.cups.org/doc/man-cupsctl.html
+            code: cupsctl --no-remote-any
+            revertCode: cupsctl --remote-any
+          - name: Disable remote printer administration
+            recommend: standard
+            docs: https://www.cups.org/doc/man-cupsctl.html
+            code: cupsctl --no-remote-admin
+            revertCode: cupsctl --remote-admin
+  - category: Privacy over security
+    children:
+      - category: Disable File Quarantine (tracks downloaded files and warns)
+        # OS tracks downloaded files with help of quarantine-aware applications
+        # (such as Safari, Chrome) adding quarantine extended attributes to files.
+        # then OS warns and asks if you really want to open it
+        docs: https://support.apple.com/en-gb/HT202491
+        children:
+          - category: Clean File Quarantine from downloaded files
+            children:
+              - name: Clear File Quarantine logs of all downloaded files
+                recommend: strict
+                docs:
+                  - https://www.macobserver.com/tips/how-to/your-mac-remembers-everything-you-download-heres-how-to-clear-download-history/
+                  - https://eclecticlight.co/2019/04/25/%F0%9F%8E%97-quarantine-apps/
+                  - https://eclecticlight.co/2017/12/11/xattr-com-apple-quarantine-the-quarantine-flag/
+                  - https://eclecticlight.co/2017/08/14/show-me-your-metadata-extended-attributes-in-macos-sierra/
+                  # Query entries using:
+                  #   sqlite3 ~/Library/Preferences/com.apple.LaunchServices.QuarantineEventsV2 'select DISTINCT LSQuarantineDataURLString from LSQuarantineEvent'
+                code: |-
+                  db_file=~/Library/Preferences/com.apple.LaunchServices.QuarantineEventsV2
+                  db_query='delete from LSQuarantineEvent'
+                  if [ -f "$db_file" ]; then
+                      echo "Database exists at \"$db_file\""
+                      if ls -lO "$db_file" | grep --silent 'schg'; then
+                          sudo chflags noschg "$db_file"
+                          echo "Found and removed system immutable flag"
+                          has_sytem_immutable_flag=true
+                      fi
+                      if ls -lO "$db_file" | grep --silent 'uchg'; then
+                          sudo chflags nouchg "$db_file"
+                          echo "Found and removed user immutable flag"
+                          has_user_immutable_flag=true
+                      fi
+                      sqlite3 "$db_file" "$db_query"
+                      echo "Executed the query \"$db_query\""
+                      if [ "$has_sytem_immutable_flag" = true ] ; then
+                          sudo chflags schg "$db_file"
+                          echo "Added system immutable flag back"
+                      fi
+                      if [ "$has_user_immutable_flag" = true ] ; then
+                          sudo chflags uchg "$db_file"
+                          echo "Added user immutable flag back"
+                      fi
+                  else
+                      echo "No action needed, database does not exist at \"$db_file\""
+                  fi
+              - name: Clear File Quarantine attribute from downloaded files
+                docs: https://superuser.com/questions/28384/what-should-i-do-about-com-apple-quarantine
+                code: |-
+                  find ~/Downloads        \
+                          -type f         \
+                          -exec           \
+                              sh -c       \
+                                  '
+                                      attr="com.apple.quarantine"
+                                      file="{}"
+                                      if [[ $(xattr "$file") = *$attr* ]]; then
+                                          if xattr -d "$attr" "$file" 2>/dev/null; then
+                                              echo "🧹 Cleaned attribute from \"$file\""
+                                          else
+                                              >&2 echo "❌ Failed to clean attribute from \"$file\""
+                                          fi
+                                      else
+                                          echo "No attribute in \"$file\""
+                                      fi
+                                  '       \
+                              {} \;
+          - category: Disable File Quarantine from tracking downloaded files
+            children:
+              - name: Prevent quarantine from logging downloaded files
+                docs:
+                  - https://eclecticlight.co/2019/04/25/%F0%9F%8E%97-quarantine-apps/
+                  - https://eclecticlight.co/2017/12/11/xattr-com-apple-quarantine-the-quarantine-flag/
+                  - https://eclecticlight.co/2017/08/14/show-me-your-metadata-extended-attributes-in-macos-sierra/
+                recommend: strict
+                code: |-
+                  file_to_lock=~/Library/Preferences/com.apple.LaunchServices.QuarantineEventsV2
+                  if [ -f "$file_to_lock" ]; then
+                      sudo chflags schg "$file_to_lock"
+                      echo "Made file immutable at \"$file_to_lock\""
+                  else
+                      echo "No action is needed, file does not exist at \"$file_to_lock\""
+                  fi
+                revertCode: |-
+                  file_to_lock=~/Library/Preferences/com.apple.LaunchServices.QuarantineEventsV2
+                  if [ -f "$file_to_lock" ]; then
+                      sudo chflags noschg "$file_to_lock"
+                      echo "Successfully reverted immutability from \"$file_to_lock\""
+                  else
+                      >&2 echo "Cannot revert immutability, file does not exist at\"$file_to_lock\""
+                  fi
+              - name: Disable using extended quarantine attribute on downloaded files (disables warning)
+                # Disables dialogs shown when opening an application for the first time
+                # i.e. "Application Downloaded from Internet" quarantine warning.
+                docs:
+                  - https://apple.stackexchange.com/questions/373176/disable-the-use-of-the-com-apple-quarantine-extended-attribute-on-mojave
+                  - https://superuser.com/questions/266176/is-there-some-way-to-disable-the-dialogs-shown-when-opening-an-application-for-t
+                  - https://macos-defaults.com/misc/lsquarantine.html
+                code: sudo defaults write com.apple.LaunchServices 'LSQuarantine' -bool NO
+                revertCode: sudo defaults delete com.apple.LaunchServices 'LSQuarantine'
+      - category: Disable Gatekeeper (enforces code-signing)
+        # Built on top of File Quarantine, requires code-signing for apps.
+        # Warns user if a file is not signed by it's developer with certificate issued by Apple.
+        # Can protect against unknown threats.
+        children:
+          - name: Prevent Gatekeeper from automatically reactivating itself
+            docs:
+              - https://osxdaily.com/2015/11/05/stop-gatekeeper-auto-rearm-mac-os-x/
+              - https://www.cnet.com/tech/computing/how-to-disable-gatekeeper-permanently-on-os-x/
+            code: sudo defaults write /Library/Preferences/com.apple.security GKAutoRearm -bool true
+            revertCode: sudo defaults write /Library/Preferences/com.apple.security GKAutoRearm -bool false
+          - name: Disable Gatekeeper
+            docs:
+              # References for spctl --master-disable
+              - https://www.manpagez.com/man/8/spctl/
+              # References for /var/db/SystemPolicy-prefs.plist
+              - https://krypted.com/mac-security/manage-gatekeeper-from-the-command-line-in-mountain-lion/
+              - https://community.jamf.com/t5/jamf-pro/users-can-t-change-password-greyed-out/m-p/54228
+            code: |-
+              os_major_ver=$(sw_vers -productVersion | awk -F "." '{print $1}')
+              os_minor_ver=$(sw_vers -productVersion | awk -F "." '{print $2}')
+              if  [[  $os_major_ver -le 10 \
+                      || ( $os_major_ver -eq 10 && $os_minor_ver -lt 7 )  \
+                  ]]; then
+                  echo "No action needed, Gatekeeper is not available this OS version"
+              else
+                  gatekeeper_status="$(spctl --status | awk '/assessments/ {print $2}')"
+                  if [ $gatekeeper_status = "disabled" ]; then
+                      echo "No action needed, Gatekeeper is already disabled"
+                  elif [ $gatekeeper_status = "enabled" ]; then
+                      sudo spctl --master-disable
+                      sudo defaults write '/var/db/SystemPolicy-prefs' 'enabled' -string 'no'
+                      echo "Disabled Gatekeeper"
+                  else
+                      >&2 echo "Unknown gatekeeper status: $gatekeeper_status"
+                  fi
+              fi
+            revertCode: |-
+              os_major_ver=$(sw_vers -productVersion | awk -F "." '{print $1}')
+              os_minor_ver=$(sw_vers -productVersion | awk -F "." '{print $2}')
+              if  [[  $os_major_ver -le 10 \
+                      || ( $os_major_ver -eq 10 && $os_minor_ver -lt 7 )  \
+                  ]]; then
+                  >&2 echo "Gatekeeper is not available in this OS version"
+              else
+                  gatekeeper_status="$(spctl --status | awk '/assessments/ {print $2}')"
+                  if [ $gatekeeper_status = "disabled" ]; then
+                      sudo spctl --master-enable
+                      sudo defaults write '/var/db/SystemPolicy-prefs' 'enabled' -string 'yes'
+                      echo "Enabled Gatekeeper"
+                  elif [ $gatekeeper_status = "enabled" ]; then
+                      echo "No action needed, Gatekeeper is already enabled"
+                  else
+                      >&2 echo "Unknown Gatekeeper status: $gatekeeper_status"
+                  fi
+              fi
+      - name: Disable Library Validation Entitlement (checks signature of libraries)
+        docs:
+          - https://developer.apple.com/documentation/bundleresources/entitlements/com_apple_security_cs_disable-library-validation
+          - https://www.macenhance.com/docs/general/sip-library-validation.html
+          - https://www.naut.ca/blog/2020/11/13/forbidden-commands-to-liberate-macos/
+        code: sudo defaults write /Library/Preferences/com.apple.security.libraryvalidation.plist 'DisableLibraryValidation' -bool true
+        revertCode: sudo defaults write /Library/Preferences/com.apple.security.libraryvalidation.plist 'DisableLibraryValidation' -bool false
+      - category: Disable automatic updates
+        docs:
+          - https://developer.apple.com/documentation/devicemanagement/deviceinformationresponse/queryresponses/osupdatesettings
+          - https://macadminsdoc.readthedocs.io/en/master/Profiles-and-Settings/OS-X-Updates.html
+        children:
+          - name: Disable automatically checking for updates
+            docs: https://developer.apple.com/documentation/devicemanagement/softwareupdate
+            code: |-
+              # For OS X Yosemite and later (>= 10.10)
+              sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate 'AutomaticCheckEnabled' -bool false
+            revertCode: |-
+              # For OS X Yosemite and later (>= 10.10)
+              sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate 'AutomaticCheckEnabled' -bool true
+          - name: Disable automatically downloading new updates when available
+            docs: https://developer.apple.com/documentation/devicemanagement/softwareupdate
+            code: |-
+              # For OS X Yosemite and later (>= 10.10)
+              sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate 'AutomaticDownload' -bool false
+            revertCode: |-
+              # For OS X Yosemite and later (>= 10.10)
+              sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate 'AutomaticDownload' -bool true
+          - name: Disable automatically installing macOS updates
+            docs:
+              # References for AutoUpdateRestartRequired
+              - https://kb.vmware.com/s/article/2960635
+              - https://derflounder.wordpress.com/2018/12/28/enabling-automatic-macos-software-updates-for-os-x-yosemite-through-macos-mojave/
+              # References for AutomaticallyInstallMacOSUpdates
+              - https://developer.apple.com/documentation/devicemanagement/softwareupdate
+            code: |-
+              # For OS X Yosemite through macOS High Sierra (>= 10.10 && < 10.14)
+              sudo defaults write /Library/Preferences/com.apple.commerce 'AutoUpdateRestartRequired' -bool false
+              # For Mojave and later (>= 10.14)
+              sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate 'AutomaticallyInstallMacOSUpdates' -bool false
+            revertCode: |-
+              # For OS X Yosemite through macOS High Sierra (>= 10.10 && < 10.14)
+              sudo defaults write /Library/Preferences/com.apple.commerce 'AutoUpdateRestartRequired' -bool true
+              # For Mojave and later (>= 10.14)
+              sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate 'AutomaticallyInstallMacOSUpdates' -bool true
+          - name: Disable automatically updating app from the App Store
+            docs:
+              - https://kb.vmware.com/s/article/2960635
+              - https://derflounder.wordpress.com/2018/12/28/enabling-automatic-macos-software-updates-for-os-x-yosemite-through-macos-mojave/
+            code: |-
+              # For OS X Yosemite and later (>= 10.10)
+              sudo defaults write /Library/Preferences/com.apple.commerce 'AutoUpdate' -bool false
+              # For Mojave and later (>= 10.14)
+              sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate 'AutomaticallyInstallAppUpdates' -bool false
+            revertCode: |-
+              # For OS X Yosemite and later
+              sudo defaults write /Library/Preferences/com.apple.commerce 'AutoUpdate' -bool true
+              # For Mojave and later (>= 10.14)
+              sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate 'AutomaticallyInstallAppUpdates' -bool true
+          - name: Disable installation of macOS beta releases
+            docs: https://support.apple.com/en-gb/HT203018
+            code: |-
+              # For OS X Yosemite and later (>= 10.10)
+              sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate 'AllowPreReleaseInstallation' -bool false
+            revertCode: |-
+              # For OS X Yosemite and later (>= 10.10)
+              sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate 'AllowPreReleaseInstallation' -bool true
+          - name: Disable automatically installing configuration data (e.g. XProtect, Gatekeeper, MRT)
+            docs: https://derflounder.wordpress.com/2018/12/28/enabling-automatic-macos-software-updates-for-os-x-yosemite-through-macos-mojave/
+            code: |-
+              # For OS X Yosemite and later (>= 10.10)
+              sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate 'ConfigDataInstall' -bool false
+            revertCode: |-
+              # For OS X Yosemite and later (>= 10.10)
+              sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate 'ConfigDataInstall' -bool true
+          - name: Disable automatically installing system data files and security updates
+            docs:
+              # References for CriticalUpdateInstall
+              - https://derflounder.wordpress.com/2014/12/24/managing-os-xs-automatic-security-updates/
+              - https://developer.apple.com/documentation/devicemanagement/softwareupdate
+              # References for softwareupdate --background-critical
+              - https://managingosx.wordpress.com/2013/04/30/undocumented-options/
+            code: |-
+              # For OS X Yosemite and later (>= 10.10)
+              sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate 'CriticalUpdateInstall' -bool false
+            revertCode: |-
+              # For OS X Yosemite and later (>= 10.10)
+              sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate 'CriticalUpdateInstall' -bool true
+              # Trigger background check with normal scan (critical updates only)
+              sudo softwareupdate --background-critical
+functions:
+  - name: PersistUserEnvironmentConfiguration
+    parameters:
+      - name: configuration
+    code: |-
+      command='{{ $configuration }}'
+      declare -a profile_files=("$HOME/.bash_profile" "$HOME/.zprofile")
+      for profile_file in "${profile_files[@]}"
+      do
+          touch "$profile_file"
+          if ! grep -q "$command" "${profile_file}"; then
+              echo "$command" >> "$profile_file"
+              echo "[$profile_file] Configured"
+          else
+              echo "[$profile_file] No need for any action, already configured"
+          fi
+      done
+    revertCode: |-
+      command='{{ $configuration }}'
+      declare -a profile_files=("$HOME/.bash_profile" "$HOME/.zprofile")
+      for profile_file in "${profile_files[@]}"
+      do
+          if grep -q "$command" "${profile_file}" 2>/dev/null; then
+              sed -i '' "/$command/d" "$profile_file"
+              echo "[$profile_file] Reverted configuration"
+          else
+              echo "[$profile_file] No need for any action, configuration does not exist"
+          fi
+      done
