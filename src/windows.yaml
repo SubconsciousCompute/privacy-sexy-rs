@@ -2740,8 +2740,8 @@ actions:
                         parameters:
                           property: UnknownThreatDefaultAction    # Status:   Get-MpPreference | Select-Object -Property UnknownThreatDefaultAction
                             #  Setting or removing `UnknownThreatDefaultAction` has same affect for (sets also same value):
-                            #   `LowThreatDefaultAction`, `ModerateThreatDefaultAction`, `HighThreatDefaultAction`, `SevereThreatDefaultAction`.
-                            #  E.g. if it's set to 8, all others will also be set to 8, and once it's removed, all others get also removed.
+                          #   `LowThreatDefaultAction`, `ModerateThreatDefaultAction`, `HighThreatDefaultAction`, `SevereThreatDefaultAction`.
+                          #  E.g. if it's set to 8, all others will also be set to 8, and once it's removed, all others get also removed.
                           #  Those properties cannot have different values than `UnknownThreatDefaultAction`, so we only set `UnknownThreatDefaultAction`
                           value: "'9'"                            # Set:      Set-MpPreference -Force -UnknownThreatDefaultAction 9
                           # Default: 0 (none)
@@ -3334,8 +3334,8 @@ actions:
                         # ❌ Not generally supported on Windows (before 4.18.2106.5 Defender platform)
                         property: EngineUpdatesChannel  # Status:   Get-MpPreference | Select-Object -Property EngineUpdatesChannel
                         value: "'Broad'"                # Set:      Set-MpPreference -Force -EngineUpdatesChannel 'Broad'
-                          # Valid values:
-                          #   0 = 'NotConfigured' (default), 'Beta', 'Broad', 'Preview', 'Staged'
+                        # Valid values:
+                        #   0 = 'NotConfigured' (default), 'Beta', 'Broad', 'Preview', 'Staged'
                         #   ❌ Windows 11 21H2 supports only 'NotConfigured', 'Beta', 'Preview' but not 'Broad', 'Staged'
                         default: "'NotConfigured'"      # Default: 0 (NotConfigured) | Remove-MpPreference -Force -EngineUpdatesChannel | Set-MpPreference -Force -EngineUpdatesChannel "'NotConfigured'"
                   - name: Limit Defender platform updates to those that complete gradual release cycle
@@ -3348,8 +3348,8 @@ actions:
                         # ❌ Not generally supported on Windows (before 4.18.2106.5 Defender platform)
                         property: PlatformUpdatesChannel    # Status:   Get-MpPreference | Select-Object -Property PlatformUpdatesChannel
                         value: "'Broad'"                    # Set:      Set-MpPreference -Force -PlatformUpdatesChannel 'Broad'
-                          # Valid values:
-                          #   0 = 'NotConfigured' (default), 'Beta', 'Broad', 'Preview', 'Staged'
+                        # Valid values:
+                        #   0 = 'NotConfigured' (default), 'Beta', 'Broad', 'Preview', 'Staged'
                         #   ❌ Windows 11 21H2 supports only 'NotConfigured', 'Beta', 'Preview' but not 'Broad', 'Staged'
                         default: "'NotConfigured'"          # Default: 0 (NotConfigured) | Remove-MpPreference -Force -PlatformUpdatesChannel | Set-MpPreference -Force -PlatformUpdatesChannel "'NotConfigured'"
                   - name: Limit Defender definition updates to those that complete gradual release cycle
@@ -3363,7 +3363,7 @@ actions:
                         property: DefinitionUpdatesChannel  # Status:   Get-MpPreference | Select-Object -Property DefinitionUpdatesChannel
                         # Its former name was "SignaturesUpdatesChannel"
                         value: "'Broad'"                    # Set:      Set-MpPreference -Force -DefinitionUpdatesChannel 'Broad'
-                          #   0 = 'NotConfigured' (default), 'Beta', Preview' 'Broad', 'Staged'
+                        #   0 = 'NotConfigured' (default), 'Beta', Preview' 'Broad', 'Staged'
                         #   ❌ Windows 11 21H2 supports only 'NotConfigured', 'Beta', 'Preview' but not 'Broad', 'Staged'
                         default: "'NotConfigured'"          # Default: 0 (NotConfigured) | Remove-MpPreference -Force -DefinitionUpdatesChannel | Set-MpPreference -Force -DefinitionUpdatesChannel "'NotConfigured'"
               - category: Disable Windows Defender reporting
