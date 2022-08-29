@@ -73,6 +73,7 @@ pub struct FunctionCallData {
 pub enum FunctionCallsData {
     VecFunctionCallData(Vec<FunctionCallData>),
     FunctionCallData(FunctionCallData),
+    None,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

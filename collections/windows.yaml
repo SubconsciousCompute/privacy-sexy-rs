@@ -1,4 +1,3 @@
-# Structure documented in "docs/collection-files.md"
 os: windows
 scripting:
   language: batchfile
