@@ -1,5 +1,8 @@
 # privacy-sexy
 
+![docs.rs](https://img.shields.io/docsrs/privacy-sexy?style=flat-square)
+![Crates.io](https://img.shields.io/crates/v/privacy-sexy?style=flat-square)
+
 Open-source tool to enforce privacy & security best-practices on Windows and MacOs, because privacy is sexy 🍑🍆
 
 - privacy-sexy is a data-driven application where it reads the necessary OS-specific logic from
