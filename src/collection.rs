@@ -59,7 +59,7 @@ pub enum DocumentationUrlsData {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ParameterDefinitionData {
     /// - Name of the parameters that the function has.
-    /// - Parameter names must be defined to be used in [expressions (templating)](./templating.md#expressions).
+    /// - Parameter names must be defined to be used in [expressions (templating)](./README.md#expressions).
     /// - ❗ Parameter names must be unique and include alphanumeric characters only.
     pub name: String,
     /// - Specifies whether the caller [Script](ScriptData) must provide any value for the parameter.
@@ -67,7 +67,7 @@ pub struct ParameterDefinitionData {
     ///   - Otherwise it throws.
     /// - 💡 Set it to `true` if a parameter is used conditionally;
     ///   - Or else set it to `false` for verbosity or do not define it as default value is `false` anyway.
-    /// - 💡 Can be used in conjunction with [`with` expression](./templating.md#with).
+    /// - 💡 Can be used in conjunction with [`with` expression](./README.md#with).
     pub optional: Option<bool>,
 }
 
@@ -80,7 +80,7 @@ pub struct ParameterDefinitionData {
 ///      - Must define `code` property and optionally `revertCode` but not `call`.
 ///   2. Caller function: a function that calls other functions.
 ///      - Must define `call` property but not `code` or `revertCode`.
-/// - 👀 Read more on [Templating](./templating.md) for function expressions and [example usages](./templating.md#parameter-substitution).
+/// - 👀 Read more on [Templating](./README.md) for function expressions and [example usages](./README.md#parameter-substitution).
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FunctionData {
     /// - Name of the function that scripts will use.
@@ -89,25 +89,25 @@ pub struct FunctionData {
     /// - ❗ Function names must be unique
     pub name: String,
     /// - Batch file commands that will be executed
-    /// - 💡 [Expressions (templating)](./templating.md#expressions) can be used in its value
+    /// - 💡 [Expressions (templating)](./README.md#expressions) can be used in its value
     /// - 💡 If defined, best practice to also define `revertCode`
     /// - ❗ If not defined `call` must be defined
     pub code: Option<String>,
     /// - Code that'll undo the change done by `code` property.
     /// - E.g. let's say `code` sets an environment variable as `setx POWERSHELL_TELEMETRY_OPTOUT 1`
     ///   - then `revertCode` should be doing `setx POWERSHELL_TELEMETRY_OPTOUT 0`
-    /// - 💡 [Expressions (templating)](./templating.md#expressions) can be used in code
+    /// - 💡 [Expressions (templating)](./README.md#expressions) can be used in code
     #[serde(rename = "revertCode")]
     pub revert_code: Option<String>,
     /// - A shared function or sequence of functions to call (called in order)
-    /// - The parameter values that are sent can use [expressions (templating)](./templating.md#expressions)
+    /// - The parameter values that are sent can use [expressions (templating)](./README.md#expressions)
     /// - ❗ If not defined `code` must be defined
     pub call: Option<FunctionCallsData>,
     /// - List of parameters that function code refers to.
-    /// - ❗ Must be defined to be able use in [`FunctionCall`](FunctionCallData) or [expressions (templating)](./templating.md#expressions)
+    /// - ❗ Must be defined to be able use in [`FunctionCall`](FunctionCallData) or [expressions (templating)](./README.md#expressions)
     /// `code`: *`string`* (**required** if `call` is undefined)
     /// - Batch file commands that will be executed
-    /// - 💡 [Expressions (templating)](./templating.md#expressions) can be used in its value
+    /// - 💡 [Expressions (templating)](./README.md#expressions) can be used in its value
     /// - 💡 If defined, best practice to also define `revertCode`
     /// - ❗ If not defined `call` must be defined
     pub parameters: Option<Vec<ParameterDefinitionData>>,
@@ -123,13 +123,13 @@ pub struct FunctionData {
 ///       appName: Microsoft.WindowsFeedbackHub
 ///   ```
 ///
-/// - 💡 [Expressions (templating)](./templating.md#expressions) can be used as parameter value
+/// - 💡 [Expressions (templating)](./README.md#expressions) can be used as parameter value
 pub type FunctionCallParametersData = Value;
 
 /// ### `FunctionCall`
 ///
 /// - Describes a single call to a function by optionally providing values to its parameters.
-/// - 👀 See [parameter substitution](./templating.md#parameter-substitution) for an example usage
+/// - 👀 See [parameter substitution](./README.md#parameter-substitution) for an example usage
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FunctionCallData {
     /// - Name of the function to call.
@@ -145,7 +145,7 @@ pub struct FunctionCallData {
     ///       appName: Microsoft.WindowsFeedbackHub
     ///   ```
     ///
-    /// - 💡 [Expressions (templating)](./templating.md#expressions) can be used as parameter value
+    /// - 💡 [Expressions (templating)](./README.md#expressions) can be used as parameter value
     pub parameters: Option<FunctionCallParametersData>,
 }
 
@@ -203,13 +203,13 @@ pub struct ScriptingDefinitionData {
     pub file_extension: Option<String>,
     /// - Code that'll be inserted on top of user created script.
     /// - Global variables such as `$homepage`, `$version`, `$date` can be used using
-    ///   [parameter substitution](./templating.md#parameter-substitution) code syntax such as `Welcome to {{ $homepage }}!`
+    ///   [parameter substitution](./README.md#parameter-substitution) code syntax such as `Welcome to {{ $homepage }}!`
     #[serde(rename = "startCode")]
     pub start_code: String,
     #[serde(rename = "endCode")]
     /// - Code that'll be inserted at the end of user created script.
     /// - Global variables such as `$homepage`, `$version`, `$date` can be used using
-    ///   [parameter substitution](./templating.md#parameter-substitution) code syntax such as `Welcome to {{ $homepage }}!`
+    ///   [parameter substitution](./README.md#parameter-substitution) code syntax such as `Welcome to {{ $homepage }}!`
     pub end_code: String,
 }
 
