@@ -1,3 +1,10 @@
+//! - privacy-sexy is a data-driven application where it reads the necessary OS-specific logic from
+//!   yaml files in [`collections`](https://github.com/sn99/privacy-sexy/tree/master/collections)
+//! - 💡 Best practices
+//!   - If you repeat yourself, try to utilize [YAML-defined functions](FunctionData)
+//!   - Always try to add documentation and a way to revert a tweak in [scripts](ScriptData)
+//! - 📖 Types in code: [`collections.rs`](https://github.com/sn99/privacy-sexy/blob/master/src/collection.rs)
+
 use crate::OS;
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
@@ -35,20 +42,29 @@ pub struct CategoryData {
     /// - Name of the category
     /// - ❗ Must be unique throughout the [Collection](CollectionData)
     pub category: String,
+    /// - Single documentation URL or list of URLs for those who wants to learn more about the script
+    /// - E.g. `https://docs.microsoft.com/en-us/windows-server/`
     pub docs: Option<DocumentationUrlsData>,
 }
 
+/// Enum to hold possible values
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum CategoryOrScriptData {
+    /// Refer to [Collection](CategoryData)
     CategoryData(CategoryData),
+    /// Refer to [Collection](ScriptData)
     ScriptData(ScriptData),
 }
 
+/// - Single documentation URL or list of URLs for those who wants to learn more about the script
+/// - E.g. `https://docs.microsoft.com/en-us/windows-server/`
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum DocumentationUrlsData {
+    /// Multiple URLs
     VecStrings(Vec<String>),
+    /// Single URL
     String(String),
 }
 
@@ -149,10 +165,13 @@ pub struct FunctionCallData {
     pub parameters: Option<FunctionCallParametersData>,
 }
 
+/// Possible parameters of a function call i.e. either one parameter or multiple parameters
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum FunctionCallsData {
+    /// Multiple Parameter
     VecFunctionCallData(Vec<FunctionCallData>),
+    /// Single Parameter
     FunctionCallData(FunctionCallData),
 }
 
@@ -198,7 +217,9 @@ pub struct ScriptData {
 /// - Defines global properties for scripting that's used throughout its parent [Collection](CollectionData).
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ScriptingDefinitionData {
+    /// Name of the Script
     pub language: String,
+    /// Optional file extension fo the said script
     #[serde(rename = "fileExtension")]
     pub file_extension: Option<String>,
     /// - Code that'll be inserted on top of user created script.
@@ -219,8 +240,10 @@ pub struct ScriptingDefinitionData {
 ///   - `strict`: Scripts that can break certain functionality in favor of privacy and security
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Recommend {
+    /// - `standard`: Only non-breaking scripts without limiting OS functionality
     #[serde(rename = "standard")]
     Standard,
+    /// - `strict`: Scripts that can break certain functionality in favor of privacy and security
     #[serde(rename = "strict")]
     Strict,
 }

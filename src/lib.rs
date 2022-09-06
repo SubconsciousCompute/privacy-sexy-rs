@@ -15,10 +15,13 @@ use serde::{Deserialize, Serialize};
 /// Allowed values for OS
 #[derive(Debug, Serialize, Deserialize)]
 pub enum OS {
+    /// Apple
     #[serde(rename = "macos")]
     MacOs,
+    /// Microsoft
     #[serde(rename = "windows")]
     Windows,
+    /// OpenSource 💕
     #[serde(rename = "linux")]
     Linux,
 }

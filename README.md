@@ -1,7 +1,7 @@
 # privacy-sexy
 
-![docs.rs](https://img.shields.io/docsrs/privacy-sexy?style=flat-square)
-![Crates.io](https://img.shields.io/crates/v/privacy-sexy?style=flat-square)
+[![docs.rs](https://img.shields.io/docsrs/privacy-sexy?style=flat-square)](https://docs.rs/privacy-sexy/latest/privacy_sexy/)
+[![Crates.io](https://img.shields.io/crates/v/privacy-sexy?style=flat-square)](https://crates.io/crates/privacy-sexy)
 
 Open-source tool to enforce privacy & security best-practices on Windows and MacOs, because privacy is sexy 🍑🍆
 
