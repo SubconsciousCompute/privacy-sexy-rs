@@ -1,6 +1,6 @@
 [package]
 name = "privacy-sexy"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["sn99 <siddharthn.099@gmail.com>"]
 description = "Open-source tool to enforce privacy & security best-practices on Windows and MacOs, because privacy is sexy 🍑🍆"
@@ -13,4 +13,4 @@ license = "MIT"
 
 [dependencies]
 serde = {version = "1.0.144", features = ["derive"]}
-serde_yaml = "0.9.10"
+serde_yaml = "0.9.11"
