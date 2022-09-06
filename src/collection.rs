@@ -1,9 +1,4 @@
-//! - privacy-sexy is a data-driven application where it reads the necessary OS-specific logic from
-//!   yaml files in [`collections`](./../collections/)
-//! - 💡 Best practices
-//!   - If you repeat yourself, try to utilize [YAML-defined functions](#Function)
-//!   - Always try to add documentation and a way to revert a tweak in [scripts](#Script)
-//! - 📖 Types in code: [`collections.rs`](./../src/collections.rs)
+use crate::OS;
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
 
@@ -12,16 +7,17 @@ use serde_yaml::Value;
 /// - A collection simply defines:
 ///   - different categories and their scripts in a tree structure
 ///   - OS specific details
-/// - Also allows defining common [function](#Function)s to be used throughout the collection if
+/// - Also allows defining common [function](FunctionData)s to be used throughout the collection if
 ///   you'd like different scripts to share same code.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CollectionData {
-    /// - Operating system that the [Collection](#collection) is written for.
-    pub os: String,
+    /// - Operating system that the [Collection](CollectionData) is written for.
+    /// - 📖 See [crate](OS) enum for allowed values.
+    pub os: OS,
     /// - Defines the scripting language that the code of other action uses.
     pub scripting: ScriptingDefinitionData,
-    /// - Each [category](#category) is rendered as different cards in card presentation.
-    /// - ❗ A [Collection](#collection) must consist of at least one category.
+    /// - Each [category](CategoryData) is rendered as different cards in card presentation.
+    /// - ❗ A [Collection](CollectionData) must consist of at least one category.
     pub actions: Vec<CategoryData>,
     /// - Functions are optionally defined to re-use the same code throughout different scripts.
     pub functions: Option<Vec<FunctionData>>,
@@ -37,7 +33,7 @@ pub struct CategoryData {
     /// - Children can be combination of scripts and subcategories.
     pub children: Vec<CategoryOrScriptData>,
     /// - Name of the category
-    /// - ❗ Must be unique throughout the [Collection](#collection)
+    /// - ❗ Must be unique throughout the [Collection](CollectionData)
     pub category: String,
     pub docs: Option<DocumentationUrlsData>,
 }
@@ -59,14 +55,14 @@ pub enum DocumentationUrlsData {
 /// ### `FunctionParameter`
 ///
 /// - Defines a parameter that function requires optionally or mandatory.
-/// - Its arguments are provided by a [Script](#script) through a [FunctionCall](#FunctionCall).
+/// - Its arguments are provided by a [Script](ScriptData) through a [FunctionCall](FunctionCallData).
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ParameterDefinitionData {
     /// - Name of the parameters that the function has.
     /// - Parameter names must be defined to be used in [expressions (templating)](./templating.md#expressions).
     /// - ❗ Parameter names must be unique and include alphanumeric characters only.
     pub name: String,
-    /// - Specifies whether the caller [Script](#script) must provide any value for the parameter.
+    /// - Specifies whether the caller [Script](ScriptData) must provide any value for the parameter.
     /// - If set to `false` i.e. an argument value is not optional then it expects a non-empty value for the variable;
     ///   - Otherwise it throws.
     /// - 💡 Set it to `true` if a parameter is used conditionally;
@@ -79,7 +75,7 @@ pub struct ParameterDefinitionData {
 ///
 /// - Functions allow re-usable code throughout the defined scripts.
 /// - Functions are templates compiled by privacy.sexy and uses special expression expressions.
-/// - A function can be of two different types (just like [scripts](#script)):
+/// - A function can be of two different types (just like [scripts](ScriptData)):
 ///   1. Inline function: a function with an inline code.
 ///      - Must define `code` property and optionally `revertCode` but not `call`.
 ///   2. Caller function: a function that calls other functions.
@@ -108,7 +104,7 @@ pub struct FunctionData {
     /// - ❗ If not defined `code` must be defined
     pub call: Option<FunctionCallsData>,
     /// - List of parameters that function code refers to.
-    /// - ❗ Must be defined to be able use in [`FunctionCall`](#functioncall) or [expressions (templating)](./templating.md#expressions)
+    /// - ❗ Must be defined to be able use in [`FunctionCall`](FunctionCallData) or [expressions (templating)](./templating.md#expressions)
     /// `code`: *`string`* (**required** if `call` is undefined)
     /// - Batch file commands that will be executed
     /// - 💡 [Expressions (templating)](./templating.md#expressions) can be used in its value
@@ -137,7 +133,7 @@ pub type FunctionCallParametersData = Value;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FunctionCallData {
     /// - Name of the function to call.
-    /// - ❗ Function with same name must defined in `functions` property of [Collection](#collection)
+    /// - ❗ Function with same name must defined in `functions` property of [Collection](CollectionData)
     pub function: String,
     /// - Defines key value dictionary for each parameter and its value
     /// - E.g.
@@ -163,7 +159,7 @@ pub enum FunctionCallsData {
 /// ### `Script`
 ///
 /// - Script represents a single tweak.
-/// - A script can be of two different types (just like [functions](#function)):
+/// - A script can be of two different types (just like [functions](FunctionData)):
 ///   1. Inline script; a script with an inline code
 ///      - Must define `code` property and optionally `revertCode` but not `call`
 ///   2. Caller script; a script that calls other functions
@@ -172,7 +168,7 @@ pub enum FunctionCallsData {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ScriptData {
     /// - Name of the script
-    /// - ❗ Must be unique throughout the [Collection](#collection)
+    /// - ❗ Must be unique throughout the [Collection](CollectionData)
     pub name: String,
     /// - Batch file commands that will be executed
     /// - 💡 If defined, best practice to also define `revertCode`
@@ -199,7 +195,7 @@ pub struct ScriptData {
 
 /// ### `ScriptingDefinition`
 ///
-/// - Defines global properties for scripting that's used throughout its parent [Collection](#collection).
+/// - Defines global properties for scripting that's used throughout its parent [Collection](CollectionData).
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ScriptingDefinitionData {
     pub language: String,
@@ -228,482 +224,3 @@ pub enum Recommend {
     #[serde(rename = "strict")]
     Strict,
 }
-
-/*
-Machine generated struct for .yaml configs
-
-use serde::{Deserialize, Serialize};
-use serde_json;
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Windows {
-    pub os: String,
-    pub scripting: Scripting,
-    pub actions: Vec<Action>,
-    pub functions: Vec<FunctionElement>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Action {
-    pub category: String,
-    pub children: Vec<ActionChild>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ActionChild {
-    pub category: Option<String>,
-    pub children: Option<Vec<PurpleChild>>,
-    pub name: Option<String>,
-    pub code: Option<String>,
-    pub docs: Option<IndecentDocs>,
-    pub recommend: Option<Recommend>,
-    pub call: Option<FriskyCall>,
-    #[serde(rename = "revertCode")]
-    pub revert_code: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PurpleCall {
-    pub function: PurpleFunction,
-    pub parameters: PurpleParameters,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PurpleParameters {
-    pub code: Option<String>,
-    #[serde(rename = "revertCode")]
-    pub revert_code: Option<String>,
-    #[serde(rename = "serviceName")]
-    pub service_name: Option<String>,
-    #[serde(rename = "defaultStartupMode")]
-    pub default_startup_mode: Option<DefaultStartupMode>,
-    pub message: Option<String>,
-    #[serde(rename = "ignoreWindows11")]
-    pub ignore_windows11: Option<bool>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct FluffyCall {
-    pub function: String,
-    pub parameters: FluffyParameters,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct FluffyParameters {
-    pub code: Option<String>,
-    #[serde(rename = "serviceName")]
-    pub service_name: Option<String>,
-    #[serde(rename = "defaultStartupMode")]
-    pub default_startup_mode: Option<DefaultStartupMode>,
-    #[serde(rename = "revertCode")]
-    pub revert_code: Option<String>,
-    #[serde(rename = "featureName")]
-    pub feature_name: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PurpleChild {
-    pub name: Option<String>,
-    pub code: Option<String>,
-    pub recommend: Option<Recommend>,
-    pub category: Option<String>,
-    pub children: Option<Vec<FluffyChild>>,
-    pub docs: Option<IndigoDocs>,
-    #[serde(rename = "revertCode")]
-    pub revert_code: Option<String>,
-    pub call: Option<MischievousCall>,
-    pub recomend: Option<Recommend>,
-    pub enabler: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct TentacledCall {
-    pub function: PurpleFunction,
-    pub parameters: TentacledParameters,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct TentacledParameters {
-    #[serde(rename = "serviceName")]
-    pub service_name: Option<String>,
-    #[serde(rename = "defaultStartupMode")]
-    pub default_startup_mode: Option<DefaultStartupMode>,
-    pub code: Option<String>,
-    #[serde(rename = "revertCode")]
-    pub revert_code: Option<String>,
-    pub setting: Option<String>,
-    #[serde(rename = "powerShellValue")]
-    pub power_shell_value: Option<String>,
-    #[serde(rename = "featureName")]
-    pub feature_name: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct FluffyChild {
-    pub category: Option<String>,
-    pub docs: Option<StickyDocs>,
-    pub children: Option<Vec<TentacledChild>>,
-    pub name: Option<String>,
-    pub recommend: Option<Recommend>,
-    pub code: Option<String>,
-    pub call: Option<BraggadociousCall>,
-    #[serde(rename = "revertCode")]
-    pub revert_code: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct StickyCall {
-    pub function: FluffyFunction,
-    pub parameters: StickyParameters,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct StickyParameters {
-    pub property: Option<String>,
-    pub value: Option<String>,
-    #[serde(rename = "default")]
-    pub parameters_default: Option<String>,
-    pub code: Option<String>,
-    #[serde(rename = "revertCode")]
-    pub revert_code: Option<String>,
-    #[serde(rename = "setDefaultOnWindows11")]
-    pub set_default_on_windows11: Option<bool>,
-    #[serde(rename = "packageName")]
-    pub package_name: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct IndigoCall {
-    pub function: TentacledFunction,
-    pub parameters: IndigoParameters,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct IndigoParameters {
-    #[serde(rename = "serviceName")]
-    pub service_name: Option<String>,
-    #[serde(rename = "defaultStartupMode")]
-    pub default_startup_mode: Option<DefaultStartupMode>,
-    #[serde(rename = "processName")]
-    pub process_name: Option<String>,
-    pub code: Option<String>,
-    #[serde(rename = "revertCode")]
-    pub revert_code: Option<String>,
-    #[serde(rename = "packageName")]
-    pub package_name: Option<String>,
-    #[serde(rename = "featureName")]
-    pub feature_name: Option<String>,
-    #[serde(rename = "capabilityName")]
-    pub capability_name: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct TentacledChild {
-    pub name: Option<String>,
-    pub recommend: Option<Recommend>,
-    pub code: Option<String>,
-    pub docs: Option<TentacledDocs>,
-    #[serde(rename = "revertCode")]
-    pub revert_code: Option<String>,
-    pub call: Option<Call1>,
-    pub category: Option<String>,
-    pub children: Option<Vec<StickyChild>>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct IndecentCall {
-    pub function: FluffyFunction,
-    pub parameters: IndecentParameters,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct IndecentParameters {
-    pub property: Option<String>,
-    pub value: Option<String>,
-    #[serde(rename = "default")]
-    pub parameters_default: Option<String>,
-    pub code: Option<String>,
-    #[serde(rename = "revertCode")]
-    pub revert_code: Option<String>,
-    #[serde(rename = "setDefaultOnWindows11")]
-    pub set_default_on_windows11: Option<bool>,
-    #[serde(rename = "serviceName")]
-    pub service_name: Option<String>,
-    #[serde(rename = "defaultStartupMode")]
-    pub default_startup_mode: Option<DefaultStartupMode>,
-    #[serde(rename = "filePath")]
-    pub file_path: Option<String>,
-    #[serde(rename = "packageName")]
-    pub package_name: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct HilariousCall {
-    pub function: TentacledFunction,
-    pub parameters: HilariousParameters,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct HilariousParameters {
-    #[serde(rename = "processName")]
-    pub process_name: Option<String>,
-    pub property: Option<String>,
-    pub value: Option<String>,
-    #[serde(rename = "default")]
-    pub parameters_default: Option<String>,
-    #[serde(rename = "packageName")]
-    pub package_name: Option<String>,
-    #[serde(rename = "featureName")]
-    pub feature_name: Option<String>,
-    #[serde(rename = "capabilityName")]
-    pub capability_name: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct StickyChild {
-    pub name: Option<String>,
-    pub docs: Option<FluffyDocs>,
-    pub call: Option<Call2>,
-    pub code: Option<String>,
-    #[serde(rename = "revertCode")]
-    pub revert_code: Option<String>,
-    pub recommend: Option<Recommend>,
-    pub category: Option<String>,
-    pub children: Option<Vec<IndigoChild>>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct AmbitiousCall {
-    pub function: TentacledFunction,
-    pub parameters: AmbitiousParameters,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct AmbitiousParameters {
-    pub property: String,
-    pub value: String,
-    #[serde(rename = "default")]
-    pub parameters_default: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct IndigoChild {
-    pub name: Option<String>,
-    pub docs: Option<PurpleDocs>,
-    pub call: Option<Vec<ChildCallClass>>,
-    pub code: Option<String>,
-    #[serde(rename = "revertCode")]
-    pub revert_code: Option<String>,
-    pub category: Option<String>,
-    pub children: Option<Vec<IndecentChild>>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ChildCallClass {
-    pub function: FluffyFunction,
-    pub parameters: CunningParameters,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CunningParameters {
-    pub property: Option<String>,
-    pub value: Option<String>,
-    #[serde(rename = "default")]
-    pub parameters_default: Option<String>,
-    pub code: Option<String>,
-    #[serde(rename = "revertCode")]
-    pub revert_code: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct IndecentChild {
-    pub name: String,
-    pub docs: String,
-    pub code: String,
-    #[serde(rename = "revertCode")]
-    pub revert_code: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct FunctionElement {
-    pub name: String,
-    pub parameters: Vec<Parameter>,
-    pub code: Option<String>,
-    #[serde(rename = "revertCode")]
-    pub revert_code: Option<String>,
-    pub call: Option<FunctionCall>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CunningCall {
-    pub function: FluffyFunction,
-    pub parameters: MagentaParameters,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct MagentaParameters {
-    #[serde(rename = "serviceName")]
-    pub service_name: String,
-    #[serde(rename = "defaultStartupMode")]
-    pub default_startup_mode: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct MagentaCall {
-    pub function: TentacledFunction,
-    pub parameters: FriskyParameters,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct FriskyParameters {
-    pub code: String,
-    #[serde(rename = "revertCode")]
-    pub revert_code: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Parameter {
-    pub name: String,
-    pub optional: Option<bool>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Scripting {
-    pub language: String,
-    #[serde(rename = "startCode")]
-    pub start_code: String,
-    #[serde(rename = "endCode")]
-    pub end_code: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum FriskyCall {
-    FluffyCall(FluffyCall),
-    PurpleCallArray(Vec<PurpleCall>),
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum MischievousCall {
-    FluffyCallArray(Vec<FluffyCall>),
-    TentacledCall(TentacledCall),
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum BraggadociousCall {
-    IndigoCall(IndigoCall),
-    StickyCallArray(Vec<StickyCall>),
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum Call1 {
-    HilariousCall(HilariousCall),
-    IndecentCallArray(Vec<IndecentCall>),
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum Call2 {
-    AmbitiousCall(AmbitiousCall),
-    IndecentCallArray(Vec<IndecentCall>),
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum PurpleDocs {
-    String(String),
-    StringArray(Vec<String>),
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum FluffyDocs {
-    String(String),
-    StringArray(Vec<String>),
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum TentacledDocs {
-    String(String),
-    StringArray(Vec<String>),
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum StickyDocs {
-    String(String),
-    StringArray(Vec<String>),
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum IndigoDocs {
-    String(String),
-    StringArray(Vec<String>),
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum IndecentDocs {
-    String(String),
-    StringArray(Vec<String>),
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum FunctionCall {
-    CunningCallArray(Vec<CunningCall>),
-    MagentaCall(MagentaCall),
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub enum PurpleFunction {
-    DisableFeature,
-    DisablePerUserService,
-    DisableService,
-    RunInlineCode,
-    SetVsCodeSetting,
-    ShowWarning,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub enum DefaultStartupMode {
-    Automatic,
-    Manual,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub enum FluffyFunction {
-    DisableServiceInRegistry,
-    RenameSystemFile,
-    RunInlineCode,
-    RunInlineCodeAsTrustedInstaller,
-    SetMpPreference,
-    UninstallStoreApp,
-    UninstallSystemApp,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub enum TentacledFunction {
-    DisableFeature,
-    DisableService,
-    KillProcessWhenItStarts,
-    RunPowerShell,
-    SetMpPreference,
-    UninstallCapability,
-    UninstallStoreApp,
-    UninstallSystemApp,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub enum Recommend {
-    #[serde(rename = "standard")]
-    Standard,
-    #[serde(rename = "strict")]
-    Strict,
-}
-*/

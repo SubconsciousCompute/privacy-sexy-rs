@@ -12,8 +12,8 @@
     - E.g. `Hello {{ $name }} !`
 - Syntax is close to [Go Templates ❤](https://pkg.go.dev/text/template) that has inspired this templating language.
 - Functions enables usage of expressions.
-    - In script definition parts of a function, see [`Function`](./collection-files.md#Function).
-    - When doing a call as argument values, see [`FunctionCall`](./collection-files.md#Function).
+    - In script definition parts of a function, see [`FunctionData`](collection.rs).
+    - When doing a call as argument values, see [`FunctionCallData`](collection.rs).
 
 ### Parameter substitution
 
@@ -26,7 +26,7 @@ A simple function example:
   code: Hello {{ $argument }} !
 ```
 
-It would print "Hello world" if it's called in a [script](./collection-files.md#script) as following:
+It would print "Hello world" if it's called in a `script` as following:
 
 ```yaml
   script: Echo script
@@ -82,7 +82,9 @@ Example:
 - Allows stacking actions one after another also known as "chaining".
 - Like [Unix pipelines](https://en.wikipedia.org/wiki/Pipeline_(Unix)), the concept is simple: each pipeline's output
   becomes the input of the following pipe.
-- You cannot create pipes. [A dedicated compiler](./application.md#parsing-and-compiling) provides pre-defined pipes to
+- You cannot create
+  pipes. [A dedicated compiler](https://github.com/undergroundwires/privacy.sexy/blob/master/docs/application.md#parsing-and-compiling)
+  provides pre-defined pipes to
   consume in collection files.
 - You can combine pipes with other expressions such as [parameter substitution](#parameter-substitution)
   and [with](#with) syntax.
