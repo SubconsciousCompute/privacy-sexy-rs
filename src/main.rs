@@ -1,5 +1,9 @@
-use privacy_sexy::OS::Windows;
-
 fn main() {
-    println!("{:#?}", privacy_sexy::get_collection(Windows))
+    match privacy_sexy::get_collection(privacy_sexy::OS::Windows) {
+        Ok(cd) => match cd.parse() {
+            Ok(cd_parsed) => println!("{}", cd_parsed),
+            Err(e) => eprintln!("{:?}", e),
+        },
+        Err(e) => eprintln!("{:?}", e),
+    }
 }

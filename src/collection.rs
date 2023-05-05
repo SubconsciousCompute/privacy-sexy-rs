@@ -5,9 +5,28 @@
 //!   - Always try to add documentation and a way to revert a tweak in [scripts](ScriptData)
 //! - 📖 Types in code: [`collections.rs`](https://github.com/sn99/privacy-sexy/blob/master/src/collection.rs)
 
+use std::{fs, io::Error as IOError, path::Path};
+
 use crate::OS;
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
+
+#[derive(Debug)]
+pub enum ParseError {
+    FunctionNotFound,
+    ParameterNotFound,
+}
+
+type Error = ParseError;
+type ParseResult = Result<String, Error>;
+type VecParseResult = Result<Vec<String>, Error>;
+
+pub enum SaveError {
+    ParseError(ParseError),
+    IOError(IOError),
+}
+
+type Functions = Option<Vec<FunctionData>>;
 
 /// ### `Collection`
 ///
@@ -27,7 +46,31 @@ pub struct CollectionData {
     /// - ❗ A [Collection](CollectionData) must consist of at least one category.
     pub actions: Vec<CategoryData>,
     /// - Functions are optionally defined to re-use the same code throughout different scripts.
-    pub functions: Option<Vec<FunctionData>>,
+    pub functions: Functions,
+}
+
+impl CollectionData {
+    pub fn parse(&self) -> ParseResult {
+        Ok(format!(
+            "{}\n\n{}\n\n{}",
+            self.scripting.start_code,
+            self.actions
+                .iter()
+                .map(|action| action.parse(&self.functions))
+                .collect::<VecParseResult>()?
+                .join("\n\n"),
+            self.scripting.end_code,
+        ))
+    }
+
+    pub fn save(&self, path: impl AsRef<Path>) -> Result<(), SaveError> {
+        match self.parse() {
+            Ok(parsed) => {
+                fs::write(path, parsed).map_err(|e| SaveError::IOError(e))
+            }
+            Err(e) => Err(SaveError::ParseError(e)),
+        }
+    }
 }
 
 /// ### `Category`
@@ -47,6 +90,17 @@ pub struct CategoryData {
     pub docs: Option<DocumentationUrlsData>,
 }
 
+impl CategoryData {
+    fn parse(&self, funcs: &Functions) -> ParseResult {
+        Ok(self
+            .children
+            .iter()
+            .map(|child| child.parse(funcs))
+            .collect::<VecParseResult>()?
+            .join("\n\n"))
+    }
+}
+
 /// Enum to hold possible values
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
@@ -55,6 +109,15 @@ pub enum CategoryOrScriptData {
     CategoryData(CategoryData),
     /// Refer to [Collection](ScriptData)
     ScriptData(ScriptData),
+}
+
+impl CategoryOrScriptData {
+    fn parse(&self, funcs: &Functions) -> ParseResult {
+        match self {
+            CategoryOrScriptData::CategoryData(data) => data.parse(funcs),
+            CategoryOrScriptData::ScriptData(data) => data.parse(funcs),
+        }
+    }
 }
 
 /// - Single documentation URL or list of URLs for those who wants to learn more about the script
@@ -84,7 +147,8 @@ pub struct ParameterDefinitionData {
     /// - 💡 Set it to `true` if a parameter is used conditionally;
     ///   - Or else set it to `false` for verbosity or do not define it as default value is `false` anyway.
     /// - 💡 Can be used in conjunction with [`with` expression](./README.md#with).
-    pub optional: Option<bool>,
+    #[serde(default)]
+    pub optional: bool,
 }
 
 /// ### `Function`
@@ -129,6 +193,48 @@ pub struct FunctionData {
     pub parameters: Option<Vec<ParameterDefinitionData>>,
 }
 
+impl FunctionData {
+    // Needs better Implementation
+    fn parse(
+        &self,
+        params: &Option<FunctionCallParametersData>,
+        funcs: &Functions,
+    ) -> ParseResult {
+        if let Some(code_string) = &self.code {
+            match &self.parameters {
+                Some(vec_pdd) => {
+                    let mut parsed = code_string.to_string();
+                    for pdd in vec_pdd {
+                        match params {
+                            Some(params) => {
+                                if let Some(v) = params.get(&pdd.name) {
+                                    parsed = parsed.replace(
+                                        format!("{{ ${} }}", &pdd.name)
+                                            .as_str(),
+                                        v.as_str().unwrap_or_default(),
+                                    );
+                                }
+                            }
+                            None => {
+                                if !pdd.optional {
+                                    return Err(Error::ParameterNotFound);
+                                }
+                            }
+                        }
+                    }
+                    Ok(parsed)
+                }
+                None => Ok(code_string.to_string()),
+            }
+        } else {
+            match &self.call {
+                Some(fcd) => fcd.parse(funcs),
+                None => Ok("".to_string()),
+            }
+        }
+    }
+}
+
 /// - Defines key value dictionary for each parameter and its value
 /// - E.g.
 ///
@@ -165,6 +271,20 @@ pub struct FunctionCallData {
     pub parameters: Option<FunctionCallParametersData>,
 }
 
+impl FunctionCallData {
+    fn parse(&self, funcs: &Functions) -> ParseResult {
+        match funcs {
+            Some(vec_fd) => {
+                match vec_fd.iter().find(|fd| fd.name == self.function) {
+                    Some(fd) => fd.parse(&self.parameters, funcs),
+                    None => Err(Error::FunctionNotFound),
+                }
+            }
+            None => Err(Error::FunctionNotFound),
+        }
+    }
+}
+
 /// Possible parameters of a function call i.e. either one parameter or multiple parameters
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
@@ -173,6 +293,19 @@ pub enum FunctionCallsData {
     VecFunctionCallData(Vec<FunctionCallData>),
     /// Single Parameter
     FunctionCallData(FunctionCallData),
+}
+
+impl FunctionCallsData {
+    fn parse(&self, funcs: &Functions) -> ParseResult {
+        match &self {
+            FunctionCallsData::VecFunctionCallData(vec_fcd) => Ok(vec_fcd
+                .iter()
+                .map(|fcd| fcd.parse(funcs))
+                .collect::<VecParseResult>()?
+                .join("\n\n")),
+            FunctionCallsData::FunctionCallData(fcd) => fcd.parse(funcs),
+        }
+    }
 }
 
 /// ### `Script`
@@ -212,6 +345,19 @@ pub struct ScriptData {
     pub recommend: Option<Recommend>,
 }
 
+impl ScriptData {
+    fn parse(&self, funcs: &Functions) -> ParseResult {
+        if let Some(code_string) = &self.code {
+            Ok(code_string.to_string())
+        } else {
+            match &self.call {
+                Some(fcd) => fcd.parse(funcs),
+                None => Ok("".to_string()),
+            }
+        }
+    }
+}
+
 /// ### `ScriptingDefinition`
 ///
 /// - Defines global properties for scripting that's used throughout its parent [Collection](CollectionData).
@@ -219,7 +365,7 @@ pub struct ScriptData {
 pub struct ScriptingDefinitionData {
     /// Name of the Script
     pub language: String,
-    /// Optional file extension fo the said script
+    /// Optional file extension for the said script
     #[serde(rename = "fileExtension")]
     pub file_extension: Option<String>,
     /// - Code that'll be inserted on top of user created script.
