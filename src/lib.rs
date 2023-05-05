@@ -27,7 +27,9 @@ pub enum OS {
 }
 
 /// Main way to get rules in form of [`CollectionData`](collection::CollectionData)
-pub fn get_collection(os: OS) -> Result<CollectionData, Box<dyn std::error::Error>> {
+pub fn get_collection(
+    os: OS,
+) -> Result<CollectionData, Box<dyn std::error::Error>> {
     let mut filename = "collections/".to_string();
 
     match os {
