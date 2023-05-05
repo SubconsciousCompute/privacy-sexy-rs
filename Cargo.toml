@@ -2,7 +2,10 @@
 name = "privacy-sexy"
 version = "0.1.1"
 edition = "2021"
-authors = ["sn99 <siddharthn.099@gmail.com>"]
+authors = [
+  "sn99 <siddharthn.099@gmail.com>",
+  "arghyadipchak <arghyadip.chak16@gmail.com",
+]
 description = "Open-source tool to enforce privacy & security best-practices on Windows and MacOs, because privacy is sexy 🍑🍆"
 keywords = ["privacy", "windows", "macos", "yaml", "security"]
 readme = "README.md"
@@ -12,5 +15,5 @@ license = "MIT"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serde = {version = "1.0.144", features = ["derive"]}
-serde_yaml = "0.9.11"
+serde = { version = "1.0.162", features = ["derive"] }
+serde_yaml = "0.9.21"
