@@ -1,0 +1,25 @@
+os: windows
+scripting:
+  language: batchfile
+  startCode: |-
+    Test Start Code
+  endCode: |-
+    Test End Code
+actions:
+  - category: Test Cat 1
+    children:
+      - name: Action 1
+        call:
+          - function: func1
+            parameters:
+              var1: test
+functions:
+  - name: func1
+    parameters:
+      - name: var1
+        optional: true
+    code: |-
+      {{ with $var1 }}
+      {{ . }}
+      one two
+      {{ end }}
