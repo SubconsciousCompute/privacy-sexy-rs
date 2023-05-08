@@ -45,7 +45,7 @@ A function can call other functions such as:
     call:
       function: EchoArgument
       parameters:
-        argument: { { $value } }
+        argument: {{ $value }}
   - function: EchoArgument
     parameters:
       - name: 'argument'
@@ -55,7 +55,7 @@ A function can call other functions such as:
 ### with
 
 Skips its "block" if the variable is absent or empty. Its "block" is between `with` start (`{{ with .. }}`) and
-end (`{{ end }`}) expressions. E.g. `{{ with $parameterName }} Hi, I'm a block! {{ end }}`.
+end (`{{ end }}`) expressions. E.g. `{{ with $parameterName }} Hi, I'm a block! {{ end }}`.
 
 Binds its context (`.`) value of provided argument for the parameter if provided one.
 E.g. `{{ with $parameterName }} Parameter value is {{ . }} here {{ end }}`.

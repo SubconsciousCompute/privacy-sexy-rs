@@ -5,25 +5,18 @@
 //!   - Always try to add documentation and a way to revert a tweak in [scripts](ScriptData)
 //! - 📖 Types in code: [`collections.rs`](https://github.com/sn99/privacy-sexy/blob/master/src/collection.rs)
 
-use std::{fs, io::Error as IOError, path::Path};
+use std::{fs::File, path::Path};
 
 use crate::OS;
+use regex::{Captures, Regex};
 use serde::{Deserialize, Serialize};
-use serde_yaml::Value;
+use serde_yaml::{from_reader, Value};
 
 #[derive(Debug)]
-pub enum ParseError {
+pub enum Error {
     FunctionNotFound,
     ParameterNotFound,
-}
-
-type Error = ParseError;
-type ParseResult = Result<String, Error>;
-type VecParseResult = Result<Vec<String>, Error>;
-
-pub enum SaveError {
-    ParseError(ParseError),
-    IOError(IOError),
+    CallCodeNotFound,
 }
 
 type Functions = Option<Vec<FunctionData>>;
@@ -50,26 +43,23 @@ pub struct CollectionData {
 }
 
 impl CollectionData {
-    pub fn parse(&self) -> ParseResult {
+    pub fn read_file(
+        path: impl AsRef<Path>,
+    ) -> Result<CollectionData, Box<dyn std::error::Error>> {
+        Ok(from_reader::<File, CollectionData>(File::open(path)?)?)
+    }
+
+    pub fn parse(&self) -> Result<String, Error> {
         Ok(format!(
             "{}\n\n{}\n\n{}",
             self.scripting.start_code,
             self.actions
                 .iter()
                 .map(|action| action.parse(&self.functions))
-                .collect::<VecParseResult>()?
+                .collect::<Result<Vec<String>, Error>>()?
                 .join("\n\n"),
             self.scripting.end_code,
         ))
-    }
-
-    pub fn save(&self, path: impl AsRef<Path>) -> Result<(), SaveError> {
-        match self.parse() {
-            Ok(parsed) => {
-                fs::write(path, parsed).map_err(|e| SaveError::IOError(e))
-            }
-            Err(e) => Err(SaveError::ParseError(e)),
-        }
     }
 }
 
@@ -91,12 +81,12 @@ pub struct CategoryData {
 }
 
 impl CategoryData {
-    fn parse(&self, funcs: &Functions) -> ParseResult {
+    fn parse(&self, funcs: &Functions) -> Result<String, Error> {
         Ok(self
             .children
             .iter()
             .map(|child| child.parse(funcs))
-            .collect::<VecParseResult>()?
+            .collect::<Result<Vec<String>, Error>>()?
             .join("\n\n"))
     }
 }
@@ -112,7 +102,7 @@ pub enum CategoryOrScriptData {
 }
 
 impl CategoryOrScriptData {
-    fn parse(&self, funcs: &Functions) -> ParseResult {
+    fn parse(&self, funcs: &Functions) -> Result<String, Error> {
         match self {
             CategoryOrScriptData::CategoryData(data) => data.parse(funcs),
             CategoryOrScriptData::ScriptData(data) => data.parse(funcs),
@@ -194,44 +184,56 @@ pub struct FunctionData {
 }
 
 impl FunctionData {
-    // Needs better Implementation
     fn parse(
         &self,
         params: &Option<FunctionCallParametersData>,
         funcs: &Functions,
-    ) -> ParseResult {
-        if let Some(code_string) = &self.code {
-            match &self.parameters {
-                Some(vec_pdd) => {
-                    let mut parsed = code_string.to_string();
-                    for pdd in vec_pdd {
-                        match params {
-                            Some(params) => {
-                                if let Some(v) = params.get(&pdd.name) {
-                                    parsed = parsed.replace(
-                                        format!("{{ ${} }}", &pdd.name)
-                                            .as_str(),
-                                        v.as_str().unwrap_or_default(),
-                                    );
-                                }
-                            }
-                            None => {
-                                if !pdd.optional {
-                                    return Err(Error::ParameterNotFound);
-                                }
-                            }
+    ) -> Result<String, Error> {
+        let mut parsed = {
+            if let Some(fcd) = &self.call {
+                fcd.parse(funcs)?
+            } else if let Some(code_string) = &self.code {
+                code_string.to_string()
+            } else {
+                return Err(Error::CallCodeNotFound);
+            }
+        };
+
+        if let Some(vec_pdd) = &self.parameters {
+            for pdd in vec_pdd {
+                parsed = match params.as_ref().and_then(|p| p.get(&pdd.name)) {
+                    Some(v) => {
+                        if pdd.optional {
+                            Regex::new(format!(r"(?s)\{{\{{\s*with\s*\${}\s*\}}\}}(.*?)\{{\{{\s*end\s*\}}\}}", &pdd.name).as_str())
+                .unwrap()
+                .replace_all(&parsed, |c: &Captures| {
+                  c.get(1)
+                    .map_or("", |m| m.as_str())
+                    .replace("{{ . }}", v.as_str().unwrap_or_default())
+                })
+                .to_string()
+                        } else {
+                            parsed.replace(
+                                format!("{{{{ ${} }}}}", &pdd.name).as_str(),
+                                v.as_str().unwrap_or_default(),
+                            )
                         }
                     }
-                    Ok(parsed)
-                }
-                None => Ok(code_string.to_string()),
-            }
-        } else {
-            match &self.call {
-                Some(fcd) => fcd.parse(funcs),
-                None => Ok("".to_string()),
+                    None => {
+                        if pdd.optional {
+                            Regex::new(format!(r"(?s)\{{\{{\s*with\s*\${}\s*\}}\}}(.*?)\{{\{{\s*end\s*\}}\}}", &pdd.name).as_str())
+                .unwrap()
+                .replace_all(&parsed, "")
+                .to_string()
+                        } else {
+                            return Err(Error::ParameterNotFound);
+                        }
+                    }
+                };
             }
         }
+
+        Ok(parsed)
     }
 }
 
@@ -272,7 +274,7 @@ pub struct FunctionCallData {
 }
 
 impl FunctionCallData {
-    fn parse(&self, funcs: &Functions) -> ParseResult {
+    fn parse(&self, funcs: &Functions) -> Result<String, Error> {
         match funcs {
             Some(vec_fd) => {
                 match vec_fd.iter().find(|fd| fd.name == self.function) {
@@ -296,12 +298,12 @@ pub enum FunctionCallsData {
 }
 
 impl FunctionCallsData {
-    fn parse(&self, funcs: &Functions) -> ParseResult {
+    fn parse(&self, funcs: &Functions) -> Result<String, Error> {
         match &self {
             FunctionCallsData::VecFunctionCallData(vec_fcd) => Ok(vec_fcd
                 .iter()
                 .map(|fcd| fcd.parse(funcs))
-                .collect::<VecParseResult>()?
+                .collect::<Result<Vec<String>, Error>>()?
                 .join("\n\n")),
             FunctionCallsData::FunctionCallData(fcd) => fcd.parse(funcs),
         }
@@ -346,14 +348,13 @@ pub struct ScriptData {
 }
 
 impl ScriptData {
-    fn parse(&self, funcs: &Functions) -> ParseResult {
-        if let Some(code_string) = &self.code {
+    fn parse(&self, funcs: &Functions) -> Result<String, Error> {
+        if let Some(fcd) = &self.call {
+            fcd.parse(funcs)
+        } else if let Some(code_string) = &self.code {
             Ok(code_string.to_string())
         } else {
-            match &self.call {
-                Some(fcd) => fcd.parse(funcs),
-                None => Ok("".to_string()),
-            }
+            Err(Error::CallCodeNotFound)
         }
     }
 }

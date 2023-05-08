@@ -8,7 +8,6 @@
 pub mod collection;
 
 pub use collection::CollectionData;
-use std::fs::File;
 
 use serde::{Deserialize, Serialize};
 
@@ -42,8 +41,9 @@ pub fn get_collection(
         }
     }
 
-    let file = File::open(filename)?;
-    let deser: CollectionData = serde_yaml::from_reader(file)?;
+    // let file = File::open(filename)?;
+    // let deser: CollectionData = serde_yaml::from_reader(file)?;
 
-    Ok(deser)
+    // Ok(deser)
+    CollectionData::read_file(filename)
 }
