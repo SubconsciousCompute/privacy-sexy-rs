@@ -15,9 +15,7 @@ fn test() {
                 .parse()
                 .unwrap()
                 .trim(),
-            fs::read_to_string(fpath.with_extension("txt"))
-                .unwrap()
-                .trim()
+            fs::read_to_string(fpath.with_extension("txt")).unwrap().trim()
         );
     }
 }

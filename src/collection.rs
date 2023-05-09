@@ -43,9 +43,7 @@ pub struct CollectionData {
 }
 
 impl CollectionData {
-    pub fn read_file(
-        path: impl AsRef<Path>,
-    ) -> Result<CollectionData, Box<dyn std::error::Error>> {
+    pub fn read_file(path: impl AsRef<Path>) -> Result<CollectionData, Box<dyn std::error::Error>> {
         Ok(from_reader::<File, CollectionData>(File::open(path)?)?)
     }
 
@@ -188,11 +186,7 @@ pub struct FunctionData {
 }
 
 impl FunctionData {
-    fn parse(
-        &self,
-        params: &Option<FunctionCallParametersData>,
-        funcs: &Functions,
-    ) -> Result<String, Error> {
+    fn parse(&self, params: &Option<FunctionCallParametersData>, funcs: &Functions) -> Result<String, Error> {
         let mut parsed = {
             if let Some(fcd) = &self.call {
                 fcd.parse(funcs)?
@@ -203,103 +197,102 @@ impl FunctionData {
             }
         };
 
-        if let Some(vec_pdd) = &self.parameters {
-            for pdd in vec_pdd {
-                parsed = match params.as_ref().and_then(|p| p.get(&pdd.name)) {
-          Some(v) => {
-            if pdd.optional {
-              parsed = Regex::new(
-                format!(r"(?s)\{{\{{\s*with\s*\${}\s*\}}\}}\s?(.*?)\s?\{{\{{\s*end\s*\}}\}}", &pdd.name)
-                  .as_str(),
-                )
-                .unwrap()
-                .replace_all(&parsed, |c: &Captures| {
-                  c.get(1).map_or("", |m| m.as_str())
-                    .replace("{{ . ", format!("{{{{ ${} ", &pdd.name).as_str())
-                })
-                .to_string();
-            }
-
-            Regex::new(
-              format!(r"\{{\{{\s*\${}\s*((\|\s*\w*\s*)*)\}}\}}", &pdd.name)
-                .as_str(),
-            )
-            .unwrap()
-            .replace_all(&parsed, |c: &Captures| {
-              c.get(1).map_or("", |m| m.as_str()).split("|").fold(
-                v.as_str().unwrap().to_string(),
-                |v, pipe| match pipe.trim() {
-                  "inlinePowerShell" => {
+        fn piper(pipe: &str, text: &str) -> String {
+            match pipe {
+                "inlinePowerShell" => {
                     // Inline comments
-                    let v = Regex::new(r"<#.?#>|#(.*)").unwrap().replace_all(
-                      &v,
-                      |c: &Captures| {
-                        c.get(1).map_or(
-                          c.get(0)
-                            .map_or("".to_string(), |m| m.as_str().to_string()),
-                          |m| format!("<# {} #>", m.as_str()),
-                        )
-                      },
-                    );
-
-                    // Here strings
-                    let v = Regex::new(
-                      r#"@(['"])\s*(?:\r\n|\r|\n)((.|\n|\r)+?)(\r\n|\r|\n)\1@"#,
-                    )
-                    .unwrap()
-                    .replace_all(&v, |c: &Captures| {
-                      let (quotes, escaped_quotes, separator) =
-                        match c.get(1).map_or("", |m| m.as_str()) {
-                          "'" => ("'", "''", "'+\"`r`n\"+'"),
-                          _ => ("\"", "`\"", "`r`n"),
-                        };
-
-                      format!(
-                        "{0}{1}{0}",
-                        quotes,
-                        Regex::new(r"\r\n|\r|\n")
-                          .unwrap()
-                          .split(
-                            c.get(2)
-                              .map_or("", |m| m.as_str())
-                              .replace("", escaped_quotes)
-                              .as_str()
-                          )
-                          .collect::<Vec<&str>>()
-                          .join(separator)
-                      )
+                    let t = Regex::new(r"<#.?#>|#(.*)").unwrap().replace_all(text, |c: &Captures| {
+                        c.get(1)
+                            .map_or(c.get(0).map_or("".to_string(), |m| m.as_str().to_string()), |m| {
+                                format!("<# {} #>", m.as_str())
+                            })
                     });
 
+                    // Here strings
+                    let t = Regex::new(r#"@(['"])\s*(?:\r\n|\r|\n)((.|\n|\r)+?)(\r\n|\r|\n)@"#)
+                        // Needs change to work without backreference
+                        .unwrap()
+                        .replace_all(&t, |c: &Captures| {
+                            let (quotes, escaped_quotes, separator) = match c.get(1).map_or("", |m| m.as_str()) {
+                                "'" => ("'", "''", "'+\"`r`n\"+'"),
+                                _ => ("\"", "`\"", "`r`n"),
+                            };
+
+                            format!(
+                                "{0}{1}{0}",
+                                quotes,
+                                Regex::new(r"\r\n|\r|\n")
+                                    .unwrap()
+                                    .split(c.get(2).map_or("", |m| m.as_str()).replace("", escaped_quotes).as_str())
+                                    .collect::<Vec<&str>>()
+                                    .join(separator)
+                            )
+                        });
+
                     // Merge lines with back tick
-                    let v = Regex::new(r" +`\s*(?:\r\n|\r|\n)\s*")
-                      .unwrap()
-                      .replace_all(&v, " ");
+                    let t = Regex::new(r" +`\s*(?:\r\n|\r|\n)\s*").unwrap().replace_all(&t, " ");
 
                     // Merge lines
                     Regex::new(r"\r\n|\r|\n")
-                      .unwrap()
-                      .split(&v)
-                      .map(|l| l.trim())
-                      .filter(|l| l.len() > 0)
-                      .collect::<Vec<&str>>()
-                      .join("; ")
-                  }
-                  "escapeDoubleQuotes" => v.replace("\"", "\"^\"\""),
-                  _ => v,
-                },
-              )
-            })
-          }
-          None => {
-            if pdd.optional {
-              Regex::new(format!(r"(?s)\{{\{{\s*with\s*\${}\s*\}}\}}\s?(.*?)\s?\{{\{{\s*end\s*\}}\}}", &pdd.name).as_str())
                         .unwrap()
-                        .replace_all(&parsed, "")
-            } else {
-              return Err(Error::ParameterNotFound);
+                        .split(&t)
+                        .map(|l| l.trim())
+                        .filter(|l| l.len() > 0)
+                        .collect::<Vec<&str>>()
+                        .join("; ")
+                }
+                "escapeDoubleQuotes" => text.replace("\"", "\"^\"\""),
+                _ => text.to_string(),
             }
-          }
-        }.to_string()
+        }
+
+        if let Some(vec_pdd) = &self.parameters {
+            for pdd in vec_pdd {
+                parsed = match params.as_ref().and_then(|p| p.get(&pdd.name)) {
+                    Some(v) => {
+                        if pdd.optional {
+                            parsed = Regex::new(
+                                format!(
+                                    r"(?s)\{{\{{\s*with\s*\${}\s*\}}\}}\s?(.*?)\s?\{{\{{\s*end\s*\}}\}}",
+                                    &pdd.name
+                                )
+                                .as_str(),
+                            )
+                            .unwrap()
+                            .replace_all(&parsed, |c: &Captures| {
+                                c.get(1)
+                                    .map_or("", |m| m.as_str())
+                                    .replace("{{ . ", format!("{{{{ ${} ", &pdd.name).as_str())
+                            })
+                            .to_string();
+                        }
+
+                        Regex::new(format!(r"\{{\{{\s*\${}\s*((\|\s*\w*\s*)*)\}}\}}", &pdd.name).as_str())
+                            .unwrap()
+                            .replace_all(&parsed, |c: &Captures| {
+                                c.get(1)
+                                    .map_or("", |m| m.as_str())
+                                    .split("|")
+                                    .fold(v.as_str().unwrap().to_string(), |v, pipe| piper(pipe, &v))
+                            })
+                    }
+                    None => {
+                        if pdd.optional {
+                            Regex::new(
+                                format!(
+                                    r"(?s)\{{\{{\s*with\s*\${}\s*\}}\}}\s?(.*?)\s?\{{\{{\s*end\s*\}}\}}",
+                                    &pdd.name
+                                )
+                                .as_str(),
+                            )
+                            .unwrap()
+                            .replace_all(&parsed, "")
+                        } else {
+                            return Err(Error::ParameterNotFound);
+                        }
+                    }
+                }
+                .to_string();
             }
         }
 
@@ -347,12 +340,8 @@ impl FunctionCallData {
     fn parse(&self, funcs: &Functions) -> Result<String, Error> {
         funcs
             .as_ref()
-            .and_then(|vec_fd| {
-                vec_fd.iter().find(|fd| fd.name == self.function)
-            })
-            .map_or(Err(Error::ParameterNotFound), |fd| {
-                fd.parse(&self.parameters, funcs)
-            })
+            .and_then(|vec_fd| vec_fd.iter().find(|fd| fd.name == self.function))
+            .map_or(Err(Error::ParameterNotFound), |fd| fd.parse(&self.parameters, funcs))
     }
 }
 
