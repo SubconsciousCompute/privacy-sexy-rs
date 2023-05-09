@@ -50,15 +50,19 @@ impl CollectionData {
     }
 
     pub fn parse(&self) -> Result<String, Error> {
+        fn parse_code(code: &str) -> String {
+            code.to_string() // TODO
+        }
+
         Ok(format!(
             "{}\n\n{}\n\n{}",
-            self.scripting.start_code,
+            parse_code(self.scripting.start_code.as_str()),
             self.actions
                 .iter()
                 .map(|action| action.parse(&self.functions))
                 .collect::<Result<Vec<String>, Error>>()?
                 .join("\n\n"),
-            self.scripting.end_code,
+            parse_code(self.scripting.end_code.as_str()),
         ))
     }
 }
@@ -202,34 +206,100 @@ impl FunctionData {
         if let Some(vec_pdd) = &self.parameters {
             for pdd in vec_pdd {
                 parsed = match params.as_ref().and_then(|p| p.get(&pdd.name)) {
-                    Some(v) => {
-                        if pdd.optional {
-                            Regex::new(format!(r"(?s)\{{\{{\s*with\s*\${}\s*\}}\}}(.*?)\{{\{{\s*end\s*\}}\}}", &pdd.name).as_str())
+          Some(v) => {
+            if pdd.optional {
+              parsed = Regex::new(
+                format!(r"(?s)\{{\{{\s*with\s*\${}\s*\}}\}}\s?(.*?)\s?\{{\{{\s*end\s*\}}\}}", &pdd.name)
+                  .as_str(),
+                )
                 .unwrap()
                 .replace_all(&parsed, |c: &Captures| {
-                  c.get(1)
-                    .map_or("", |m| m.as_str())
-                    .replace("{{ . }}", v.as_str().unwrap_or_default())
+                  c.get(1).map_or("", |m| m.as_str())
+                    .replace("{{ . ", format!("{{{{ ${} ", &pdd.name).as_str())
                 })
-                .to_string()
-                        } else {
-                            parsed.replace(
-                                format!("{{{{ ${} }}}}", &pdd.name).as_str(),
-                                v.as_str().unwrap_or_default(),
-                            )
-                        }
-                    }
-                    None => {
-                        if pdd.optional {
-                            Regex::new(format!(r"(?s)\{{\{{\s*with\s*\${}\s*\}}\}}(.*?)\{{\{{\s*end\s*\}}\}}", &pdd.name).as_str())
-                .unwrap()
-                .replace_all(&parsed, "")
-                .to_string()
-                        } else {
-                            return Err(Error::ParameterNotFound);
-                        }
-                    }
-                };
+                .to_string();
+            }
+
+            Regex::new(
+              format!(r"\{{\{{\s*\${}\s*((\|\s*\w*\s*)*)\}}\}}", &pdd.name)
+                .as_str(),
+            )
+            .unwrap()
+            .replace_all(&parsed, |c: &Captures| {
+              c.get(1).map_or("", |m| m.as_str()).split("|").fold(
+                v.as_str().unwrap().to_string(),
+                |v, pipe| match pipe.trim() {
+                  "inlinePowerShell" => {
+                    // Inline comments
+                    let v = Regex::new(r"<#.?#>|#(.*)").unwrap().replace_all(
+                      &v,
+                      |c: &Captures| {
+                        c.get(1).map_or(
+                          c.get(0)
+                            .map_or("".to_string(), |m| m.as_str().to_string()),
+                          |m| format!("<# {} #>", m.as_str()),
+                        )
+                      },
+                    );
+
+                    // Here strings
+                    let v = Regex::new(
+                      r#"@(['"])\s*(?:\r\n|\r|\n)((.|\n|\r)+?)(\r\n|\r|\n)\1@"#,
+                    )
+                    .unwrap()
+                    .replace_all(&v, |c: &Captures| {
+                      let (quotes, escaped_quotes, separator) =
+                        match c.get(1).map_or("", |m| m.as_str()) {
+                          "'" => ("'", "''", "'+\"`r`n\"+'"),
+                          _ => ("\"", "`\"", "`r`n"),
+                        };
+
+                      format!(
+                        "{0}{1}{0}",
+                        quotes,
+                        Regex::new(r"\r\n|\r|\n")
+                          .unwrap()
+                          .split(
+                            c.get(2)
+                              .map_or("", |m| m.as_str())
+                              .replace("", escaped_quotes)
+                              .as_str()
+                          )
+                          .collect::<Vec<&str>>()
+                          .join(separator)
+                      )
+                    });
+
+                    // Merge lines with back tick
+                    let v = Regex::new(r" +`\s*(?:\r\n|\r|\n)\s*")
+                      .unwrap()
+                      .replace_all(&v, " ");
+
+                    // Merge lines
+                    Regex::new(r"\r\n|\r|\n")
+                      .unwrap()
+                      .split(&v)
+                      .map(|l| l.trim())
+                      .filter(|l| l.len() > 0)
+                      .collect::<Vec<&str>>()
+                      .join("; ")
+                  }
+                  "escapeDoubleQuotes" => v.replace("\"", "\"^\"\""),
+                  _ => v,
+                },
+              )
+            })
+          }
+          None => {
+            if pdd.optional {
+              Regex::new(format!(r"(?s)\{{\{{\s*with\s*\${}\s*\}}\}}\s?(.*?)\s?\{{\{{\s*end\s*\}}\}}", &pdd.name).as_str())
+                        .unwrap()
+                        .replace_all(&parsed, "")
+            } else {
+              return Err(Error::ParameterNotFound);
+            }
+          }
+        }.to_string()
             }
         }
 
@@ -275,15 +345,14 @@ pub struct FunctionCallData {
 
 impl FunctionCallData {
     fn parse(&self, funcs: &Functions) -> Result<String, Error> {
-        match funcs {
-            Some(vec_fd) => {
-                match vec_fd.iter().find(|fd| fd.name == self.function) {
-                    Some(fd) => fd.parse(&self.parameters, funcs),
-                    None => Err(Error::FunctionNotFound),
-                }
-            }
-            None => Err(Error::FunctionNotFound),
-        }
+        funcs
+            .as_ref()
+            .and_then(|vec_fd| {
+                vec_fd.iter().find(|fd| fd.name == self.function)
+            })
+            .map_or(Err(Error::ParameterNotFound), |fd| {
+                fd.parse(&self.parameters, funcs)
+            })
     }
 }
 
