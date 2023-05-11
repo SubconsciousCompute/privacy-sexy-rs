@@ -199,21 +199,21 @@ impl FunctionData {
 
         fn piper(pipe: &str, text: &str) -> String {
             match pipe {
+                "escapeDoubleQuotes" => text.replace("\"", "\"^\"\""),
                 "inlinePowerShell" => {
                     // Inline comments
-                    let t = Regex::new(r"<#.?#>|#(.*)").unwrap().replace_all(text, |c: &Captures| {
+                    let t = Regex::new(r"<#\s*(.*)#>|#\s*(.*)")
+                        .unwrap()
+                        .replace_all(text, |c: &Captures| {
                         c.get(1)
-                            .map_or(c.get(0).map_or("".to_string(), |m| m.as_str().to_string()), |m| {
-                                format!("<# {} #>", m.as_str())
-                            })
+                                .map_or("".to_string(), |m| format!("<# {} #>", m.as_str().trim()))
                     });
 
                     // Here strings
-                    let t = Regex::new(r#"@(['"])\s*(?:\r\n|\r|\n)((.|\n|\r)+?)(\r\n|\r|\n)@"#)
-                        // Needs change to work without backreference
+                    let t = Regex::new(r#"@(['"])\s*(?:\r\n|\r|\n)((.|\n|\r)+?)(\r\n|\r|\n)['"]@"#)
                         .unwrap()
                         .replace_all(&t, |c: &Captures| {
-                            let (quotes, escaped_quotes, separator) = match c.get(1).map_or("", |m| m.as_str()) {
+                            let (quotes, escaped_quotes, separator) = match c.get(1).map_or("'", |m| m.as_str()) {
                                 "'" => ("'", "''", "'+\"`r`n\"+'"),
                                 _ => ("\"", "`\"", "`r`n"),
                             };
@@ -223,7 +223,7 @@ impl FunctionData {
                                 quotes,
                                 Regex::new(r"\r\n|\r|\n")
                                     .unwrap()
-                                    .split(c.get(2).map_or("", |m| m.as_str()).replace("", escaped_quotes).as_str())
+                                    .split(&c.get(2).map_or("", |m| m.as_str()).replace(quotes, escaped_quotes))
                                     .collect::<Vec<&str>>()
                                     .join(separator)
                             )
@@ -241,7 +241,6 @@ impl FunctionData {
                         .collect::<Vec<&str>>()
                         .join("; ")
                 }
-                "escapeDoubleQuotes" => text.replace("\"", "\"^\"\""),
                 _ => text.to_string(),
             }
         }
