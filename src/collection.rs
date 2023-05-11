@@ -43,7 +43,7 @@ pub struct CollectionData {
 }
 
 impl CollectionData {
-    pub fn read_file(path: impl AsRef<Path>) -> Result<CollectionData, Box<dyn std::error::Error>> {
+    pub fn from_file(path: impl AsRef<Path>) -> Result<CollectionData, Box<dyn std::error::Error>> {
         Ok(from_reader::<File, CollectionData>(File::open(path)?)?)
     }
 

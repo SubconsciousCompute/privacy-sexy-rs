@@ -10,7 +10,7 @@ fn test() {
         let fpath = fpath.unwrap();
 
         assert_eq!(
-            privacy_sexy::CollectionData::read_file(&fpath)
+            privacy_sexy::CollectionData::from_file(&fpath)
                 .unwrap()
                 .parse()
                 .unwrap()

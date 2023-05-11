@@ -39,9 +39,5 @@ pub fn get_collection(os: OS) -> Result<CollectionData, Box<dyn std::error::Erro
         }
     }
 
-    // let file = File::open(filename)?;
-    // let deser: CollectionData = serde_yaml::from_reader(file)?;
-
-    // Ok(deser)
-    CollectionData::read_file(filename)
+    CollectionData::from_file(filename)
 }
