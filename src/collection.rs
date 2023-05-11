@@ -19,6 +19,19 @@ pub enum Error {
     CallCodeNotFound,
 }
 
+fn comment_code(code_string: &str, name: &str, os: &OS) -> String {
+    match os {
+        OS::Windows => format!(
+            ":: {0:-^60}\n:: {1:-^60}\n:: {0:-^60}\necho --- {1}\n{2}\n:: {0:-^60}",
+            "", name, code_string
+        ),
+        _ => format!(
+            "# {0:-^60}\n:# {1:-^60}\n# {0:-^60}\necho --- {1}\n{2}\n# {0:-^60}",
+            "", name, code_string
+        ),
+    }
+}
+
 type Functions = Option<Vec<FunctionData>>;
 
 /// ### `Collection`
@@ -53,14 +66,14 @@ impl CollectionData {
         }
 
         Ok(format!(
-            "{}\n\n{}\n\n{}",
-            parse_code(self.scripting.start_code.as_str()),
+            "{}\n\n\n{}\n\n\n{}",
+            parse_code(&self.scripting.start_code),
             self.actions
                 .iter()
-                .map(|action| action.parse(&self.functions))
+                .map(|action| action.parse(&self.functions, &self.os))
                 .collect::<Result<Vec<String>, Error>>()?
-                .join("\n\n"),
-            parse_code(self.scripting.end_code.as_str()),
+                .join("\n\n\n"),
+            parse_code(&self.scripting.end_code),
         ))
     }
 }
@@ -83,13 +96,13 @@ pub struct CategoryData {
 }
 
 impl CategoryData {
-    fn parse(&self, funcs: &Functions) -> Result<String, Error> {
+    fn parse(&self, funcs: &Functions, os: &OS) -> Result<String, Error> {
         Ok(self
             .children
             .iter()
-            .map(|child| child.parse(funcs))
+            .map(|child| child.parse(funcs, os))
             .collect::<Result<Vec<String>, Error>>()?
-            .join("\n\n"))
+            .join("\n\n\n"))
     }
 }
 
@@ -104,10 +117,10 @@ pub enum CategoryOrScriptData {
 }
 
 impl CategoryOrScriptData {
-    fn parse(&self, funcs: &Functions) -> Result<String, Error> {
+    fn parse(&self, funcs: &Functions, os: &OS) -> Result<String, Error> {
         match self {
-            CategoryOrScriptData::CategoryData(data) => data.parse(funcs),
-            CategoryOrScriptData::ScriptData(data) => data.parse(funcs),
+            CategoryOrScriptData::CategoryData(data) => data.parse(funcs, os),
+            CategoryOrScriptData::ScriptData(data) => data.parse(funcs, os),
         }
     }
 }
@@ -186,10 +199,10 @@ pub struct FunctionData {
 }
 
 impl FunctionData {
-    fn parse(&self, params: &Option<FunctionCallParametersData>, funcs: &Functions) -> Result<String, Error> {
+    fn parse(&self, params: &Option<FunctionCallParametersData>, funcs: &Functions, os: &OS) -> Result<String, Error> {
         let mut parsed = {
             if let Some(fcd) = &self.call {
-                fcd.parse(funcs)?
+                fcd.parse(funcs, os)?
             } else if let Some(code_string) = &self.code {
                 code_string.to_string()
             } else {
@@ -205,9 +218,9 @@ impl FunctionData {
                     let t = Regex::new(r"<#\s*(.*)#>|#\s*(.*)")
                         .unwrap()
                         .replace_all(text, |c: &Captures| {
-                        c.get(1)
+                            c.get(1)
                                 .map_or("".to_string(), |m| format!("<# {} #>", m.as_str().trim()))
-                    });
+                        });
 
                     // Here strings
                     let t = Regex::new(r#"@(['"])\s*(?:\r\n|\r|\n)((.|\n|\r)+?)(\r\n|\r|\n)['"]@"#)
@@ -250,18 +263,15 @@ impl FunctionData {
                 parsed = match params.as_ref().and_then(|p| p.get(&pdd.name)) {
                     Some(v) => {
                         if pdd.optional {
-                            parsed = Regex::new(
-                                format!(
-                                    r"(?s)\{{\{{\s*with\s*\${}\s*\}}\}}\s?(.*?)\s?\{{\{{\s*end\s*\}}\}}",
-                                    &pdd.name
-                                )
-                                .as_str(),
-                            )
+                            parsed = Regex::new(&format!(
+                                r"(?s)\{{\{{\s*with\s*\${}\s*\}}\}}\s?(.*?)\s?\{{\{{\s*end\s*\}}\}}",
+                                &pdd.name
+                            ))
                             .unwrap()
                             .replace_all(&parsed, |c: &Captures| {
                                 c.get(1)
                                     .map_or("", |m| m.as_str())
-                                    .replace("{{ . ", format!("{{{{ ${} ", &pdd.name).as_str())
+                                    .replace("{{ . ", &format!("{{{{ ${} ", &pdd.name))
                             })
                             .to_string();
                         }
@@ -272,18 +282,17 @@ impl FunctionData {
                                 c.get(1)
                                     .map_or("", |m| m.as_str())
                                     .split("|")
-                                    .fold(v.as_str().unwrap().to_string(), |v, pipe| piper(pipe, &v))
+                                    .map(|p| p.trim())
+                                    .filter(|p| !p.is_empty())
+                                    .fold(v.as_str().unwrap().to_string(), |v, pipe| piper(pipe.trim(), &v))
                             })
                     }
                     None => {
                         if pdd.optional {
-                            Regex::new(
-                                format!(
-                                    r"(?s)\{{\{{\s*with\s*\${}\s*\}}\}}\s?(.*?)\s?\{{\{{\s*end\s*\}}\}}",
-                                    &pdd.name
-                                )
-                                .as_str(),
-                            )
+                            Regex::new(&format!(
+                                r"(?s)\{{\{{\s*with\s*\${}\s*\}}\}}\s?(.*?)\s?\{{\{{\s*end\s*\}}\}}",
+                                &pdd.name
+                            ))
                             .unwrap()
                             .replace_all(&parsed, "")
                         } else {
@@ -336,11 +345,13 @@ pub struct FunctionCallData {
 }
 
 impl FunctionCallData {
-    fn parse(&self, funcs: &Functions) -> Result<String, Error> {
+    fn parse(&self, funcs: &Functions, os: &OS) -> Result<String, Error> {
         funcs
             .as_ref()
             .and_then(|vec_fd| vec_fd.iter().find(|fd| fd.name == self.function))
-            .map_or(Err(Error::ParameterNotFound), |fd| fd.parse(&self.parameters, funcs))
+            .map_or(Err(Error::ParameterNotFound), |fd| {
+                fd.parse(&self.parameters, funcs, os)
+            })
     }
 }
 
@@ -355,14 +366,14 @@ pub enum FunctionCallsData {
 }
 
 impl FunctionCallsData {
-    fn parse(&self, funcs: &Functions) -> Result<String, Error> {
+    fn parse(&self, funcs: &Functions, os: &OS) -> Result<String, Error> {
         match &self {
             FunctionCallsData::VecFunctionCallData(vec_fcd) => Ok(vec_fcd
                 .iter()
-                .map(|fcd| fcd.parse(funcs))
+                .map(|fcd| fcd.parse(funcs, os))
                 .collect::<Result<Vec<String>, Error>>()?
                 .join("\n\n")),
-            FunctionCallsData::FunctionCallData(fcd) => fcd.parse(funcs),
+            FunctionCallsData::FunctionCallData(fcd) => fcd.parse(funcs, os),
         }
     }
 }
@@ -405,11 +416,11 @@ pub struct ScriptData {
 }
 
 impl ScriptData {
-    fn parse(&self, funcs: &Functions) -> Result<String, Error> {
+    fn parse(&self, funcs: &Functions, os: &OS) -> Result<String, Error> {
         if let Some(fcd) = &self.call {
-            fcd.parse(funcs)
+            Ok(comment_code(&fcd.parse(funcs, os)?, &self.name, os))
         } else if let Some(code_string) = &self.code {
-            Ok(code_string.to_string())
+            Ok(comment_code(code_string, &self.name, os))
         } else {
             Err(Error::CallCodeNotFound)
         }
