@@ -19,7 +19,12 @@ pub enum Error {
     CallCodeNotFound,
 }
 
-fn comment_code(code_string: &str, name: &str, os: &OS) -> String {
+fn comment_code(code_string: &str, name: &str, os: &OS, revert: bool) -> String {
+    let mut name = name.to_string();
+    if revert {
+        name.push_str(" (revert)");
+    }
+
     match os {
         OS::Windows => format!(
             ":: {0:-^60}\n:: {1:-^60}\n:: {0:-^60}\necho --- {1}\n{2}\n:: {0:-^60}",
@@ -60,7 +65,7 @@ impl CollectionData {
         Ok(from_reader::<File, CollectionData>(File::open(path)?)?)
     }
 
-    pub fn parse(&self) -> Result<String, Error> {
+    pub fn parse(&self, revert: bool) -> Result<String, Error> {
         fn parse_code(code: &str) -> String {
             code.to_string() // TODO
         }
@@ -70,7 +75,7 @@ impl CollectionData {
             parse_code(&self.scripting.start_code),
             self.actions
                 .iter()
-                .map(|action| action.parse(&self.functions, &self.os))
+                .map(|action| action.parse(&self.functions, &self.os, revert))
                 .collect::<Result<Vec<String>, Error>>()?
                 .join("\n\n\n"),
             parse_code(&self.scripting.end_code),
@@ -96,11 +101,11 @@ pub struct CategoryData {
 }
 
 impl CategoryData {
-    fn parse(&self, funcs: &Functions, os: &OS) -> Result<String, Error> {
+    fn parse(&self, funcs: &Functions, os: &OS, revert: bool) -> Result<String, Error> {
         Ok(self
             .children
             .iter()
-            .map(|child| child.parse(funcs, os))
+            .map(|child| child.parse(funcs, os, revert))
             .collect::<Result<Vec<String>, Error>>()?
             .join("\n\n\n"))
     }
@@ -117,10 +122,10 @@ pub enum CategoryOrScriptData {
 }
 
 impl CategoryOrScriptData {
-    fn parse(&self, funcs: &Functions, os: &OS) -> Result<String, Error> {
+    fn parse(&self, funcs: &Functions, os: &OS, revert: bool) -> Result<String, Error> {
         match self {
-            CategoryOrScriptData::CategoryData(data) => data.parse(funcs, os),
-            CategoryOrScriptData::ScriptData(data) => data.parse(funcs, os),
+            CategoryOrScriptData::CategoryData(data) => data.parse(funcs, os, revert),
+            CategoryOrScriptData::ScriptData(data) => data.parse(funcs, os, revert),
         }
     }
 }
@@ -199,11 +204,17 @@ pub struct FunctionData {
 }
 
 impl FunctionData {
-    fn parse(&self, params: &Option<FunctionCallParametersData>, funcs: &Functions, os: &OS) -> Result<String, Error> {
+    fn parse(
+        &self,
+        params: &Option<FunctionCallParametersData>,
+        funcs: &Functions,
+        os: &OS,
+        revert: bool,
+    ) -> Result<String, Error> {
         let mut parsed = {
             if let Some(fcd) = &self.call {
-                fcd.parse(funcs, os)?
-            } else if let Some(code_string) = &self.code {
+                fcd.parse(funcs, os, revert)?
+            } else if let Some(code_string) = if revert { &self.revert_code } else { &self.code } {
                 code_string.to_string()
             } else {
                 return Err(Error::CallCodeNotFound);
@@ -345,12 +356,12 @@ pub struct FunctionCallData {
 }
 
 impl FunctionCallData {
-    fn parse(&self, funcs: &Functions, os: &OS) -> Result<String, Error> {
+    fn parse(&self, funcs: &Functions, os: &OS, revert: bool) -> Result<String, Error> {
         funcs
             .as_ref()
             .and_then(|vec_fd| vec_fd.iter().find(|fd| fd.name == self.function))
             .map_or(Err(Error::ParameterNotFound), |fd| {
-                fd.parse(&self.parameters, funcs, os)
+                fd.parse(&self.parameters, funcs, os, revert)
             })
     }
 }
@@ -366,14 +377,14 @@ pub enum FunctionCallsData {
 }
 
 impl FunctionCallsData {
-    fn parse(&self, funcs: &Functions, os: &OS) -> Result<String, Error> {
+    fn parse(&self, funcs: &Functions, os: &OS, revert: bool) -> Result<String, Error> {
         match &self {
             FunctionCallsData::VecFunctionCallData(vec_fcd) => Ok(vec_fcd
                 .iter()
-                .map(|fcd| fcd.parse(funcs, os))
+                .map(|fcd| fcd.parse(funcs, os, revert))
                 .collect::<Result<Vec<String>, Error>>()?
                 .join("\n\n")),
-            FunctionCallsData::FunctionCallData(fcd) => fcd.parse(funcs, os),
+            FunctionCallsData::FunctionCallData(fcd) => fcd.parse(funcs, os, revert),
         }
     }
 }
@@ -416,11 +427,11 @@ pub struct ScriptData {
 }
 
 impl ScriptData {
-    fn parse(&self, funcs: &Functions, os: &OS) -> Result<String, Error> {
+    fn parse(&self, funcs: &Functions, os: &OS, revert: bool) -> Result<String, Error> {
         if let Some(fcd) = &self.call {
-            Ok(comment_code(&fcd.parse(funcs, os)?, &self.name, os))
-        } else if let Some(code_string) = &self.code {
-            Ok(comment_code(code_string, &self.name, os))
+            Ok(comment_code(&fcd.parse(funcs, os, revert)?, &self.name, os, revert))
+        } else if let Some(code_string) = if revert { &self.revert_code } else { &self.code } {
+            Ok(comment_code(code_string, &self.name, os, revert))
         } else {
             Err(Error::CallCodeNotFound)
         }
