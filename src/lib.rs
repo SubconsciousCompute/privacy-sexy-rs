@@ -10,6 +10,12 @@ pub mod collection;
 pub use collection::CollectionData;
 
 use serde::{Deserialize, Serialize};
+use std::{
+    env::temp_dir,
+    fs::{self, set_permissions, Permissions},
+    os::unix::prelude::PermissionsExt,
+    process::{Command, ExitStatus},
+};
 
 /// Allowed values for OS
 #[derive(Debug, Serialize, Deserialize)]
@@ -40,4 +46,32 @@ pub fn get_collection(os: OS) -> Result<CollectionData, Box<dyn std::error::Erro
     }
 
     CollectionData::from_file(filename)
+}
+
+pub fn run_script(
+    script_string: &str,
+    file_extension: Option<String>,
+    os: OS,
+) -> Result<ExitStatus, Box<dyn std::error::Error>> {
+    let mut tmp_file = temp_dir();
+    tmp_file.push("privacy-sexy");
+    if let Some(ext) = file_extension {
+        tmp_file.push(".");
+        tmp_file.push(ext);
+    }
+
+    fs::write(&tmp_file, script_string)?;
+    match os {
+        OS::Windows => (),
+        _ => set_permissions(&tmp_file, Permissions::from_mode(0o755))?,
+    }
+
+    Ok(match os {
+        OS::MacOs => Command::new("open")
+            .args(["-a", "Terminal.app", tmp_file.to_str().unwrap_or_default()])
+            .spawn(),
+        OS::Windows => Command::new(&tmp_file).arg("").spawn(),
+        OS::Linux => Command::new("").arg("").spawn(), // TODO
+    }?
+    .wait()?)
 }
