@@ -110,10 +110,21 @@ pub struct CollectionData {
 }
 
 impl CollectionData {
+    /// Reads [`CollectionData`] from file at `path`
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Err`] if the file cannot be opened or the contents cannot be deserialized
+    /// into [`CollectionData`]
     pub fn from_file(path: impl AsRef<Path>) -> Result<CollectionData, Box<dyn std::error::Error>> {
         Ok(from_reader::<File, CollectionData>(File::open(path)?)?)
     }
 
+    /// Parses [`CollectionData`] into a String
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error`] if the object is not parsable
     pub fn parse(&self, revert: bool) -> Result<String, Error> {
         fn parse_code(code: &str) -> String {
             code.to_string() // TODO
@@ -150,6 +161,11 @@ pub struct CategoryData {
 }
 
 impl CategoryData {
+    /// Parses [`CategoryData`] into a String
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error`] if the object is not parsable
     fn parse(&self, funcs: &Functions, os: &OS, revert: bool) -> Result<String, Error> {
         Ok(self
             .children
@@ -171,6 +187,11 @@ pub enum CategoryOrScriptData {
 }
 
 impl CategoryOrScriptData {
+    /// Parses [`CategoryOrScriptData`] into a String
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error`] if the object is not parsable
     fn parse(&self, funcs: &Functions, os: &OS, revert: bool) -> Result<String, Error> {
         match self {
             CategoryOrScriptData::CategoryData(data) => data.parse(funcs, os, revert),
@@ -253,6 +274,11 @@ pub struct FunctionData {
 }
 
 impl FunctionData {
+    /// Parses [`FunctionData`] into a String
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error`] if the object is not parsable
     fn parse(
         &self,
         params: &Option<FunctionCallParametersData>,
@@ -357,6 +383,11 @@ pub struct FunctionCallData {
 }
 
 impl FunctionCallData {
+    /// Parses [`FunctionCallData`] into a String
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error`] if the object is not parsable
     fn parse(&self, funcs: &Functions, os: &OS, revert: bool) -> Result<String, Error> {
         funcs
             .as_ref()
@@ -378,6 +409,11 @@ pub enum FunctionCallsData {
 }
 
 impl FunctionCallsData {
+    /// Parses [`FunctionCallsData`] into a String
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error`] if the object is not parsable
     fn parse(&self, funcs: &Functions, os: &OS, revert: bool) -> Result<String, Error> {
         match &self {
             FunctionCallsData::VecFunctionCallData(vec_fcd) => Ok(vec_fcd
@@ -428,6 +464,11 @@ pub struct ScriptData {
 }
 
 impl ScriptData {
+    /// Parses [`ScriptData`] into a String
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error`] if the object is not parsable
     fn parse(&self, funcs: &Functions, os: &OS, revert: bool) -> Result<String, Error> {
         if let Some(fcd) = &self.call {
             Ok(comment_code(&fcd.parse(funcs, os, revert)?, &self.name, os, revert))

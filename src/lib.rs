@@ -32,7 +32,15 @@ pub enum OS {
 }
 
 /// Main way to get rules in form of [`CollectionData`](collection::CollectionData)
-pub fn get_collection(os: OS) -> Result<CollectionData, Box<dyn std::error::Error>> {
+///
+/// # Errors
+///
+/// Return [`Err`] according to [`CollectionData`]
+///
+/// # Panics
+///
+/// Panics for [`OS::Linux`]
+pub fn get_collection(os: &OS) -> Result<CollectionData, Box<dyn std::error::Error>> {
     let mut filename = "collections/".to_string();
 
     match os {
@@ -48,10 +56,18 @@ pub fn get_collection(os: OS) -> Result<CollectionData, Box<dyn std::error::Erro
     CollectionData::from_file(filename)
 }
 
+/// Runs the script
+///
+/// # Errors
+///
+/// Returns an [`Err`] if it is unable to do one of the following:
+/// - write to the temp script file
+/// - change it's permissions (for unix)
+/// - execute the script
 pub fn run_script(
     script_string: &str,
     file_extension: Option<String>,
-    os: OS,
+    os: &OS,
 ) -> Result<ExitStatus, Box<dyn std::error::Error>> {
     let mut tmp_file = temp_dir();
     tmp_file.push("privacy-sexy");
