@@ -7,7 +7,7 @@
 
 pub mod collection;
 
-pub use collection::CollectionData;
+pub use collection::{CollectionData, Recommend};
 
 use serde::{Deserialize, Serialize};
 use std::{

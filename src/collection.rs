@@ -1,17 +1,28 @@
-//! - privacy-sexy is a data-driven application where it reads the necessary OS-specific logic from
-//!   yaml files in [`collections`](https://github.com/sn99/privacy-sexy/tree/master/collections)
-//! - 💡 Best practices
-//!   - If you repeat yourself, try to utilize [YAML-defined functions](FunctionData)
-//!   - Always try to add documentation and a way to revert a tweak in [scripts](ScriptData)
-//! - 📖 Types in code: [`collections.rs`](https://github.com/sn99/privacy-sexy/blob/master/src/collection.rs)
-
-use std::{fs::File, path::Path};
-
 use crate::OS;
+
 use regex::{Captures, Regex};
 use serde::{Deserialize, Serialize};
 use serde_yaml::{from_reader, Value};
+use std::{fs::File, path::Path};
 
+/**
+Wraps the `code_string` in comments and adds an echo call
+
+# Examples
+
+```no_run
+assert_eq!(r#"
+## ------------------------------------------------------------
+## ---------------------Clear bash history---------------------
+## ------------------------------------------------------------
+echo --- Clear bash history
+rm -f ~/.bash_history
+## ------------------------------------------------------------
+"#,
+comment_code("rm -f ~/.bash_history", "Clear bash history", &OS::Linux, false)
+)
+```
+*/
 fn comment_code(code_string: &str, name: &str, os: &OS, revert: bool) -> String {
     let mut name = name.to_string();
     if revert {
@@ -31,7 +42,18 @@ fn comment_code(code_string: &str, name: &str, os: &OS, revert: bool) -> String 
     }
 }
 
-fn piper(pipe: &str, text: &str) -> String {
+/**
+Applies pipe on `text`. Following pipes are available:
+- escapeDoubleQuotes
+- inlinePowerShell
+
+# Examples
+
+```no_run
+assert_eq!("\"^\"\"Hello\"^\"\"", piper("escapeDoubleQuotes", "\"Hello\""));
+```
+*/
+pub fn piper(pipe: &str, text: &str) -> String {
     match pipe {
         "escapeDoubleQuotes" => text.replace('\"', "\"^\"\""),
         "inlinePowerShell" => {
@@ -79,14 +101,15 @@ fn piper(pipe: &str, text: &str) -> String {
     }
 }
 
+/**
+### `ParseError`
+*/
 #[derive(Debug)]
 pub enum Error {
-    FunctionNotFound,
-    ParameterNotFound,
-    CallCodeNotFound,
+    FunctionNotFound(String),
+    ParameterNotFound(String),
+    CallCodeNotFound(String),
 }
-
-type Functions = Option<Vec<FunctionData>>;
 
 /// ### `Collection`
 ///
@@ -106,7 +129,7 @@ pub struct CollectionData {
     /// - ❗ A [Collection](CollectionData) must consist of at least one category.
     pub actions: Vec<CategoryData>,
     /// - Functions are optionally defined to re-use the same code throughout different scripts.
-    pub functions: Functions,
+    pub functions: Option<Vec<FunctionData>>,
 }
 
 impl CollectionData {
@@ -166,7 +189,13 @@ impl CategoryData {
     /// # Errors
     ///
     /// Returns [`Error`] if the object is not parsable
-    fn parse(&self, funcs: &Functions, os: &OS, revert: bool, recommend: Option<Recommend>) -> Result<String, Error> {
+    fn parse(
+        &self,
+        funcs: &Option<Vec<FunctionData>>,
+        os: &OS,
+        revert: bool,
+        recommend: Option<Recommend>,
+    ) -> Result<String, Error> {
         Ok(self
             .children
             .iter()
@@ -192,7 +221,13 @@ impl CategoryOrScriptData {
     /// # Errors
     ///
     /// Returns [`Error`] if the object is not parsable
-    fn parse(&self, funcs: &Functions, os: &OS, revert: bool, recommend: Option<Recommend>) -> Result<String, Error> {
+    fn parse(
+        &self,
+        funcs: &Option<Vec<FunctionData>>,
+        os: &OS,
+        revert: bool,
+        recommend: Option<Recommend>,
+    ) -> Result<String, Error> {
         match self {
             CategoryOrScriptData::CategoryData(data) => data.parse(funcs, os, revert, recommend),
             CategoryOrScriptData::ScriptData(data) => data.parse(funcs, os, revert, recommend),
@@ -282,7 +317,7 @@ impl FunctionData {
     fn parse(
         &self,
         params: &Option<FunctionCallParametersData>,
-        funcs: &Functions,
+        funcs: &Option<Vec<FunctionData>>,
         os: &OS,
         revert: bool,
     ) -> Result<String, Error> {
@@ -292,7 +327,7 @@ impl FunctionData {
             } else if let Some(code_string) = if revert { &self.revert_code } else { &self.code } {
                 code_string.to_string()
             } else {
-                return Err(Error::CallCodeNotFound);
+                return Err(Error::CallCodeNotFound(self.name.to_owned()));
             }
         };
 
@@ -334,7 +369,7 @@ impl FunctionData {
                             .unwrap()
                             .replace_all(&parsed, "")
                         } else {
-                            return Err(Error::ParameterNotFound);
+                            return Err(Error::ParameterNotFound(pdd.name.to_owned()));
                         }
                     }
                 }
@@ -388,11 +423,11 @@ impl FunctionCallData {
     /// # Errors
     ///
     /// Returns [`Error`] if the object is not parsable
-    fn parse(&self, funcs: &Functions, os: &OS, revert: bool) -> Result<String, Error> {
+    fn parse(&self, funcs: &Option<Vec<FunctionData>>, os: &OS, revert: bool) -> Result<String, Error> {
         funcs
             .as_ref()
             .and_then(|vec_fd| vec_fd.iter().find(|fd| fd.name == self.function))
-            .map_or(Err(Error::ParameterNotFound), |fd| {
+            .map_or(Err(Error::FunctionNotFound(self.function.to_owned())), |fd| {
                 fd.parse(&self.parameters, funcs, os, revert)
             })
     }
@@ -414,7 +449,7 @@ impl FunctionCallsData {
     /// # Errors
     ///
     /// Returns [`Error`] if the object is not parsable
-    fn parse(&self, funcs: &Functions, os: &OS, revert: bool) -> Result<String, Error> {
+    fn parse(&self, funcs: &Option<Vec<FunctionData>>, os: &OS, revert: bool) -> Result<String, Error> {
         match &self {
             FunctionCallsData::VecFunctionCallData(vec_fcd) => Ok(vec_fcd
                 .iter()
@@ -469,7 +504,13 @@ impl ScriptData {
     /// # Errors
     ///
     /// Returns [`Error`] if the object is not parsable
-    fn parse(&self, funcs: &Functions, os: &OS, revert: bool, recommend: Option<Recommend>) -> Result<String, Error> {
+    fn parse(
+        &self,
+        funcs: &Option<Vec<FunctionData>>,
+        os: &OS,
+        revert: bool,
+        recommend: Option<Recommend>,
+    ) -> Result<String, Error> {
         if recommend > self.recommend {
             Ok(String::new())
         } else if let Some(fcd) = &self.call {
@@ -477,7 +518,7 @@ impl ScriptData {
         } else if let Some(code_string) = if revert { &self.revert_code } else { &self.code } {
             Ok(comment_code(code_string, &self.name, os, revert))
         } else {
-            Err(Error::CallCodeNotFound)
+            Err(Error::CallCodeNotFound(self.name.to_owned()))
         }
     }
 }
