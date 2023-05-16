@@ -25,7 +25,7 @@ fn comment_code(code_string: &str, name: &str, os: &OS, revert: bool) -> String 
         )
     } else {
         format!(
-            "# {0:-^60}\n:# {1:-^60}\n# {0:-^60}\necho --- {1}\n{2}\n# {0:-^60}",
+            "# {0:-^60}\n# {1:-^60}\n# {0:-^60}\necho --- {1}\n{2}\n# {0:-^60}",
             "", name, code_string
         )
     }
@@ -125,7 +125,7 @@ impl CollectionData {
     /// # Errors
     ///
     /// Returns [`Error`] if the object is not parsable
-    pub fn parse(&self, revert: bool) -> Result<String, Error> {
+    pub fn parse(&self, revert: bool, recommend: Option<Recommend>) -> Result<String, Error> {
         fn parse_code(code: &str) -> String {
             code.to_string() // TODO
         }
@@ -135,7 +135,7 @@ impl CollectionData {
             parse_code(&self.scripting.start_code),
             self.actions
                 .iter()
-                .map(|action| action.parse(&self.functions, &self.os, revert))
+                .map(|action| action.parse(&self.functions, &self.os, revert, recommend,))
                 .collect::<Result<Vec<String>, Error>>()?
                 .join("\n\n\n"),
             parse_code(&self.scripting.end_code),
@@ -166,11 +166,11 @@ impl CategoryData {
     /// # Errors
     ///
     /// Returns [`Error`] if the object is not parsable
-    fn parse(&self, funcs: &Functions, os: &OS, revert: bool) -> Result<String, Error> {
+    fn parse(&self, funcs: &Functions, os: &OS, revert: bool, recommend: Option<Recommend>) -> Result<String, Error> {
         Ok(self
             .children
             .iter()
-            .map(|child| child.parse(funcs, os, revert))
+            .map(|child| child.parse(funcs, os, revert, recommend))
             .collect::<Result<Vec<String>, Error>>()?
             .join("\n\n\n"))
     }
@@ -192,10 +192,10 @@ impl CategoryOrScriptData {
     /// # Errors
     ///
     /// Returns [`Error`] if the object is not parsable
-    fn parse(&self, funcs: &Functions, os: &OS, revert: bool) -> Result<String, Error> {
+    fn parse(&self, funcs: &Functions, os: &OS, revert: bool, recommend: Option<Recommend>) -> Result<String, Error> {
         match self {
-            CategoryOrScriptData::CategoryData(data) => data.parse(funcs, os, revert),
-            CategoryOrScriptData::ScriptData(data) => data.parse(funcs, os, revert),
+            CategoryOrScriptData::CategoryData(data) => data.parse(funcs, os, revert, recommend),
+            CategoryOrScriptData::ScriptData(data) => data.parse(funcs, os, revert, recommend),
         }
     }
 }
@@ -469,8 +469,10 @@ impl ScriptData {
     /// # Errors
     ///
     /// Returns [`Error`] if the object is not parsable
-    fn parse(&self, funcs: &Functions, os: &OS, revert: bool) -> Result<String, Error> {
-        if let Some(fcd) = &self.call {
+    fn parse(&self, funcs: &Functions, os: &OS, revert: bool, recommend: Option<Recommend>) -> Result<String, Error> {
+        if recommend > self.recommend {
+            Ok(String::new())
+        } else if let Some(fcd) = &self.call {
             Ok(comment_code(&fcd.parse(funcs, os, revert)?, &self.name, os, revert))
         } else if let Some(code_string) = if revert { &self.revert_code } else { &self.code } {
             Ok(comment_code(code_string, &self.name, os, revert))
@@ -495,10 +497,10 @@ pub struct ScriptingDefinitionData {
     ///   [parameter substitution](./README.md#parameter-substitution) code syntax such as `Welcome to {{ $homepage }}!`
     #[serde(rename = "startCode")]
     pub start_code: String,
-    #[serde(rename = "endCode")]
     /// - Code that'll be inserted at the end of user created script.
     /// - Global variables such as `$homepage`, `$version`, `$date` can be used using
-    ///   [parameter substitution](./README.md#parameter-substitution) code syntax such as `Welcome to {{ $homepage }}!`
+    ///   [parameter substitution](./README.md#parameter-substitution) code syntax such as `Welcome to {{ $homepage }}!
+    #[serde(rename = "endCode")]
     pub end_code: String,
 }
 
@@ -506,12 +508,12 @@ pub struct ScriptingDefinitionData {
 /// - If defined it can be either
 ///   - `standard`: Only non-breaking scripts without limiting OS functionality
 ///   - `strict`: Scripts that can break certain functionality in favor of privacy and security
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub enum Recommend {
-    /// - `standard`: Only non-breaking scripts without limiting OS functionality
-    #[serde(rename = "standard")]
-    Standard,
     /// - `strict`: Scripts that can break certain functionality in favor of privacy and security
     #[serde(rename = "strict")]
     Strict,
+    /// - `standard`: Only non-breaking scripts without limiting OS functionality
+    #[serde(rename = "standard")]
+    Standard,
 }

@@ -12,7 +12,7 @@ fn test() {
         assert_eq!(
             privacy_sexy::CollectionData::from_file(&fpath)
                 .unwrap()
-                .parse(false)
+                .parse(false, None)
                 .unwrap()
                 .trim(),
             fs::read_to_string(fpath.with_extension("txt")).unwrap().trim()

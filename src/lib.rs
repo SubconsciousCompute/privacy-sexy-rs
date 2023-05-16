@@ -14,6 +14,7 @@ use std::{
     env::temp_dir,
     fs::{self, set_permissions, Permissions},
     os::unix::prelude::PermissionsExt,
+    path::PathBuf,
     process::{Command, ExitStatus},
 };
 
@@ -41,19 +42,15 @@ pub enum OS {
 ///
 /// Panics for [`OS::Linux`]
 pub fn get_collection(os: &OS) -> Result<CollectionData, Box<dyn std::error::Error>> {
-    let mut filename = "collections/".to_string();
+    let mut coll_file = PathBuf::from("collections");
 
-    match os {
-        OS::MacOs => {
-            filename.push_str("macos.yaml");
-        }
-        OS::Windows => filename.push_str("windows.yaml"),
-        OS::Linux => {
-            panic!("No rules yet");
-        }
-    }
+    coll_file.push(match os {
+        OS::MacOs => "macos.yaml",
+        OS::Linux => panic!("No rules yet!"),
+        OS::Windows => "windows.yaml",
+    });
 
-    CollectionData::from_file(filename)
+    CollectionData::from_file(coll_file)
 }
 
 /// Runs the script
@@ -72,22 +69,20 @@ pub fn run_script(
     let mut tmp_file = temp_dir();
     tmp_file.push("privacy-sexy");
     if let Some(ext) = file_extension {
-        tmp_file.push(".");
-        tmp_file.push(ext);
+        tmp_file.set_extension(ext);
     }
 
     fs::write(&tmp_file, script_string)?;
-    match os {
-        OS::Windows => (),
-        _ => set_permissions(&tmp_file, Permissions::from_mode(0o755))?,
+    if let OS::MacOs | OS::Linux = os {
+        set_permissions(&tmp_file, Permissions::from_mode(0o755))?;
     }
 
-    Ok(match os {
-        OS::MacOs => Command::new("open")
-            .args(["-a", "Terminal.app", tmp_file.to_str().unwrap_or_default()])
-            .spawn(),
-        OS::Windows => Command::new(&tmp_file).arg("").spawn(),
-        OS::Linux => Command::new("").arg("").spawn(), // TODO
-    }?
-    .wait()?)
+    let tmp_file = tmp_file.to_str().unwrap_or_default();
+    let (program, args) = match os {
+        OS::MacOs => ("open", vec!["-a", "Terminal.app", tmp_file]), // TODO: Test
+        OS::Linux => (tmp_file, vec![]),
+        OS::Windows => (tmp_file, vec![]), // TODO: Test
+    };
+
+    Ok(Command::new(program).args(args).spawn()?.wait()?)
 }
