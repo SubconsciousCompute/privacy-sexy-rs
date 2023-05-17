@@ -32,11 +32,11 @@ pub enum OS {
     Linux,
 }
 
-/// Main way to get rules in form of [`CollectionData`](collection::CollectionData)
+/// Main way to get rules in form of [`CollectionData`]
 ///
 /// # Errors
 ///
-/// Return [`Err`] according to [`CollectionData`]
+/// Refer to [`from_file`](CollectionData)
 ///
 /// # Panics
 ///
@@ -57,9 +57,9 @@ pub fn get_collection(os: &OS) -> Result<CollectionData, Box<dyn std::error::Err
 ///
 /// # Errors
 ///
-/// Returns an [`Err`] if it is unable to do one of the following:
-/// - write to the temp script file
-/// - change it's permissions (for unix)
+/// Returns [`Err`] if it is unable to:
+/// - write to the temp script file OR
+/// - change it's permissions (for unix) OR
 /// - execute the script
 pub fn run_script(
     script_string: &str,
@@ -79,10 +79,9 @@ pub fn run_script(
 
     let tmp_file = tmp_file.to_str().unwrap_or_default();
     let (program, args) = match os {
-        OS::MacOs => ("open", vec!["-a", "Terminal.app", tmp_file]), // TODO: Test
-        OS::Linux => (tmp_file, vec![]),
-        OS::Windows => (tmp_file, vec![]), // TODO: Test
-    };
+        OS::MacOs => ("open", vec!["-a", "Terminal.app", tmp_file]),
+        OS::Linux | OS::Windows => (tmp_file, vec![]),
+    }; // TODO: Test on Mac & Windows
 
     Ok(Command::new(program).args(args).spawn()?.wait()?)
 }
