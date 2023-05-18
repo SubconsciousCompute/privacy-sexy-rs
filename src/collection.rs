@@ -19,11 +19,11 @@ echo --- Clear bash history
 rm -f ~/.bash_history
 ## ------------------------------------------------------------
 "#,
-comment_code("rm -f ~/.bash_history", "Clear bash history", &OS::Linux, false)
+beautify("rm -f ~/.bash_history", "Clear bash history", &OS::Linux, false)
 )
 ```
 */
-fn comment_code(code_string: &str, name: &str, os: &OS, revert: bool) -> String {
+fn beautify(code_string: &str, name: &str, os: &OS, revert: bool) -> String {
     let mut name = name.to_string();
     if revert {
         name.push_str(" (revert)");
@@ -165,14 +165,22 @@ impl CollectionData {
 
     Returns [`Error`] if the object is not parsable
     */
-    pub fn parse(&self, revert: bool, recommend: Option<Recommend>) -> Result<String, Error> {
+    pub fn parse(
+        &self,
+        names: Option<&Vec<String>>,
+        revert: bool,
+        recommend: Option<Recommend>,
+    ) -> Result<String, Error> {
         Ok(format!(
             "{}\n\n\n{}\n\n\n{}",
             parse_start_end(&self.scripting.start_code),
             self.actions
                 .iter()
-                .map(|action| action.parse(&self.functions, &self.os, revert, recommend,))
+                .map(|action| action.parse(names, &self.functions, &self.os, revert, recommend))
                 .collect::<Result<Vec<String>, Error>>()?
+                .into_iter()
+                .filter(|s| !s.is_empty())
+                .collect::<Vec<String>>()
                 .join("\n\n\n"),
             parse_start_end(&self.scripting.end_code),
         ))
@@ -206,18 +214,28 @@ impl CategoryData {
 
     Returns [`Error`] if the object is not parsable
     */
-    fn parse(
+    pub fn parse(
         &self,
+        names: Option<&Vec<String>>,
         funcs: &Option<Vec<FunctionData>>,
         os: &OS,
         revert: bool,
         recommend: Option<Recommend>,
     ) -> Result<String, Error> {
+        let (names, recommend) = if names.map_or(false, |ns| ns.contains(&self.category)) {
+            (None, None)
+        } else {
+            (names, recommend)
+        };
+
         Ok(self
             .children
             .iter()
-            .map(|child| child.parse(funcs, os, revert, recommend))
+            .map(|child| child.parse(names, funcs, os, revert, recommend))
             .collect::<Result<Vec<String>, Error>>()?
+            .into_iter()
+            .filter(|s| !s.is_empty())
+            .collect::<Vec<String>>()
             .join("\n\n\n"))
     }
 }
@@ -242,14 +260,15 @@ impl CategoryOrScriptData {
     */
     fn parse(
         &self,
+        names: Option<&Vec<String>>,
         funcs: &Option<Vec<FunctionData>>,
         os: &OS,
         revert: bool,
         recommend: Option<Recommend>,
     ) -> Result<String, Error> {
         match self {
-            CategoryOrScriptData::CategoryData(data) => data.parse(funcs, os, revert, recommend),
-            CategoryOrScriptData::ScriptData(data) => data.parse(funcs, os, revert, recommend),
+            CategoryOrScriptData::CategoryData(data) => data.parse(names, funcs, os, revert, recommend),
+            CategoryOrScriptData::ScriptData(data) => data.parse(names, funcs, os, revert, recommend),
         }
     }
 }
@@ -504,6 +523,9 @@ impl FunctionCallsData {
                 .iter()
                 .map(|fcd| fcd.parse(funcs, os, revert))
                 .collect::<Result<Vec<String>, Error>>()?
+                .into_iter()
+                .filter(|s| !s.is_empty())
+                .collect::<Vec<String>>()
                 .join("\n\n")),
             FunctionCallsData::FunctionCallData(fcd) => fcd.parse(funcs, os, revert),
         }
@@ -563,19 +585,20 @@ impl ScriptData {
 
     Returns [`Error`] if the object is not parsable
     */
-    fn parse(
+    pub fn parse(
         &self,
+        names: Option<&Vec<String>>,
         funcs: &Option<Vec<FunctionData>>,
         os: &OS,
         revert: bool,
         recommend: Option<Recommend>,
     ) -> Result<String, Error> {
-        if recommend > self.recommend {
+        if (recommend.is_some() && recommend > self.recommend) || names.map_or(false, |n| !n.contains(&self.name)) {
             Ok(String::new())
         } else if let Some(fcd) = &self.call {
-            Ok(comment_code(&fcd.parse(funcs, os, revert)?, &self.name, os, revert))
+            Ok(beautify(&fcd.parse(funcs, os, revert)?, &self.name, os, revert))
         } else if let Some(code_string) = if revert { &self.revert_code } else { &self.code } {
-            Ok(comment_code(code_string, &self.name, os, revert))
+            Ok(beautify(code_string, &self.name, os, revert))
         } else {
             Err(Error::CallCodeNotFound(self.name.clone()))
         }

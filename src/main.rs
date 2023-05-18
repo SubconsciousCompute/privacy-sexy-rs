@@ -12,6 +12,9 @@ struct Cli {
     /// Recommend Standard
     #[arg(short = 'd', long)]
     standard: bool,
+    /// Name of Script(s) required
+    #[arg(short, long)]
+    name: Vec<String>,
     /// Revert
     #[arg(short, long)]
     revert: bool,
@@ -38,6 +41,7 @@ fn main() {
 
     let script = cd
         .parse(
+            if cli.name.is_empty() { None } else { Some(&cli.name) },
             cli.revert,
             if cli.strict {
                 Some(Recommend::Strict)
