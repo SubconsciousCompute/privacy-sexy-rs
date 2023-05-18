@@ -29,15 +29,14 @@ enum Commands {
 }
 
 fn main() {
-    let os = match std::env::consts::OS {
+    let cli = Cli::parse();
+    let cd = get_collection(&match std::env::consts::OS {
         "macos" => OS::MacOs,
         "linux" => OS::Linux,
         "windows" => OS::Windows,
         _ => panic!("Unsupported OS!"),
-    };
-
-    let cli = Cli::parse();
-    let cd = get_collection(&os).unwrap();
+    })
+    .unwrap();
 
     let script = cd
         .parse(
@@ -56,7 +55,7 @@ fn main() {
     match cli.command {
         Commands::Echo => println!("{script}"),
         Commands::Run => {
-            run_script(&script, cd.scripting.file_extension, &os).unwrap();
+            run_script(&script, cd.scripting.file_extension).unwrap();
         }
     }
 }

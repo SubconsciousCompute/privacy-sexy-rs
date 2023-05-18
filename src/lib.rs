@@ -12,8 +12,7 @@ pub use collection::{CollectionData, Recommend};
 use serde::{Deserialize, Serialize};
 use std::{
     env::temp_dir,
-    fs::{self, set_permissions, Permissions},
-    os::unix::prelude::PermissionsExt,
+    fs,
     path::PathBuf,
     process::{Command, ExitStatus},
 };
@@ -64,7 +63,6 @@ pub fn get_collection(os: &OS) -> Result<CollectionData, Box<dyn std::error::Err
 pub fn run_script(
     script_string: &str,
     file_extension: Option<String>,
-    os: &OS,
 ) -> Result<ExitStatus, Box<dyn std::error::Error>> {
     let mut tmp_file = temp_dir();
     tmp_file.push("privacy-sexy");
@@ -73,15 +71,12 @@ pub fn run_script(
     }
 
     fs::write(&tmp_file, script_string)?;
-    if let OS::MacOs | OS::Linux = os {
-        set_permissions(&tmp_file, Permissions::from_mode(0o755))?;
+
+    #[cfg(target_family = "unix")]
+    {
+        use std::os::unix::prelude::PermissionsExt;
+        fs::set_permissions(&tmp_file, fs::Permissions::from_mode(0o755))?;
     }
 
-    let tmp_file = tmp_file.to_str().unwrap_or_default();
-    let (program, args) = match os {
-        OS::MacOs => ("open", vec!["-a", "Terminal.app", tmp_file]),
-        OS::Linux | OS::Windows => (tmp_file, vec![]),
-    }; // TODO: Test on Mac & Windows
-
-    Ok(Command::new(program).args(args).spawn()?.wait()?)
+    Ok(Command::new(tmp_file.to_str().unwrap_or_default()).spawn()?.wait()?)
 }
