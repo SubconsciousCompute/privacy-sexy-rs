@@ -6,11 +6,11 @@
 Open-source tool to enforce privacy & security best-practices on Windows and MacOs, because privacy is sexy 🍑🍆
 
 - privacy-sexy is a data-driven application where it reads the necessary OS-specific logic from
-  yaml files in [`collections`](https://github.com/sn99/privacy-sexy/tree/master/collections)
+  yaml files in [`collections`](collections)
 - 💡 Best practices
     - If you repeat yourself, try to utilize [YAML-defined functions](FunctionData)
     - Always try to add documentation and a way to revert a tweak in [scripts](ScriptData)
-- 📖 Types in code: [`collections.rs`](https://github.com/sn99/privacy-sexy/blob/master/src/collection.rs)
+- 📖 Types in code: [`collections.rs`](src/collection.rs)
 
 Usage:
 
