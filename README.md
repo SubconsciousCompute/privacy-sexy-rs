@@ -12,7 +12,7 @@ Open-source tool to enforce privacy & security best-practices on Windows and Mac
     - Always try to add documentation and a way to revert a tweak in [scripts](ScriptData)
 - 📖 Types in code: [`collections.rs`](src/collection.rs)
 
-Usage:
+## Usage
 
 - Preferred way
 ```rust
@@ -61,6 +61,27 @@ fn main() -> Result<(), serde_yaml::Error> {
         }
     }
 }
+```
+
+## Cli
+
+```rust
+Commands
+
+Usage: privacy-sexy [OPTIONS] <COMMAND>
+
+Commands:
+  echo  Generate & print the script
+  run   Generate & run the script
+  help  Print this message or the help of the given subcommand(s)
+
+Options:
+  -t, --strict       Recommend strict
+  -d, --standard     Recommend standard
+  -n, --name <NAME>  Name of script(s) required
+  -r, --revert       Revert script(s)
+  -h, --help         Print help
+  -V, --version      Print version
 ```
 
 Refer to [`docs`](https://github.com/undergroundwires/privacy.sexy/tree/master/docs) for external documentation
