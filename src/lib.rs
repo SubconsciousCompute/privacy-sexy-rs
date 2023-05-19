@@ -5,14 +5,14 @@
 //!   - Always try to add documentation and a way to revert a tweak in [scripts](ScriptData)
 //! - 📖 Types in code: [`collections.rs`](https://github.com/sn99/privacy-sexy/blob/master/src/collection.rs)
 
-pub mod collection;
+mod collection;
+mod util;
 
 pub use collection::{CollectionData, Recommend};
 
 use serde::{Deserialize, Serialize};
 use std::{
-    env::temp_dir,
-    fs,
+    env, fs,
     path::PathBuf,
     process::{Command, ExitStatus},
 };
@@ -64,7 +64,7 @@ pub fn run_script(
     script_string: &str,
     file_extension: Option<String>,
 ) -> Result<ExitStatus, Box<dyn std::error::Error>> {
-    let mut tmp_file = temp_dir();
+    let mut tmp_file = env::temp_dir();
     tmp_file.push("privacy-sexy");
     if let Some(ext) = file_extension {
         tmp_file.set_extension(ext);

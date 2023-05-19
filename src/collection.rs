@@ -1,123 +1,21 @@
-use crate::OS;
+use crate::{
+    util::{beautify, parse_start_end, piper},
+    OS,
+};
 
 use regex::{Captures, Regex};
 use serde::{Deserialize, Serialize};
-use serde_yaml::{from_reader, Value};
+use serde_yaml;
 use std::{fs::File, path::Path};
-
-/**
-Wraps the `code_string` in comments and adds an echo call
-
-# Examples
-
-```no_run
-assert_eq!(r#"
-## ------------------------------------------------------------
-## ---------------------Clear bash history---------------------
-## ------------------------------------------------------------
-echo --- Clear bash history
-rm -f ~/.bash_history
-## ------------------------------------------------------------
-"#,
-beautify("rm -f ~/.bash_history", "Clear bash history", &OS::Linux, false)
-)
-```
-*/
-fn beautify(code_string: &str, name: &str, os: &OS, revert: bool) -> String {
-    let mut name = name.to_string();
-    if revert {
-        name.push_str(" (revert)");
-    }
-
-    if let OS::Windows = os {
-        format!(
-            ":: {0:-^60}\n:: {1:-^60}\n:: {0:-^60}\necho --- {1}\n{2}\n:: {0:-^60}",
-            "", name, code_string
-        )
-    } else {
-        format!(
-            "# {0:-^60}\n# {1:-^60}\n# {0:-^60}\necho --- {1}\n{2}\n# {0:-^60}",
-            "", name, code_string
-        )
-    }
-}
-
-/**
-Applies pipe on `text`. Following pipes are available:
-- escapeDoubleQuotes
-- inlinePowerShell
-
-# Panics
-
-Panics for invalid regex expressions
-
-# Examples
-
-```no_run
-assert_eq!("\"^\"\"Hello\"^\"\"", piper("escapeDoubleQuotes", "\"Hello\""));
-```
-*/
-pub fn piper(pipe: &str, text: &str) -> String {
-    match pipe {
-        "escapeDoubleQuotes" => text.replace('\"', "\"^\"\""),
-        "inlinePowerShell" => {
-            // Inline comments
-            let t = Regex::new(r"<#\s*(.*)#>|#\s*(.*)")
-                .unwrap()
-                .replace_all(text, |c: &Captures| {
-                    c.get(1)
-                        .map_or(String::new(), |m| format!("<# {} #>", m.as_str().trim()))
-                });
-
-            // Here strings
-            let t = Regex::new(r#"@(['"])\s*(?:\r\n|\r|\n)((.|\n|\r)+?)(\r\n|\r|\n)['"]@"#)
-                .unwrap()
-                .replace_all(&t, |c: &Captures| {
-                    let (quotes, escaped_quotes, separator) = match c.get(1).map_or("'", |m| m.as_str()) {
-                        "'" => ("'", "''", "'+\"`r`n\"+'"),
-                        _ => ("\"", "`\"", "`r`n"),
-                    };
-
-                    format!(
-                        "{0}{1}{0}",
-                        quotes,
-                        Regex::new(r"\r\n|\r|\n")
-                            .unwrap()
-                            .split(&c.get(2).map_or("", |m| m.as_str()).replace(quotes, escaped_quotes))
-                            .collect::<Vec<&str>>()
-                            .join(separator)
-                    )
-                });
-
-            // Merge lines with back tick
-            let t = Regex::new(r" +`\s*(?:\r\n|\r|\n)\s*").unwrap().replace_all(&t, " ");
-
-            // Merge lines
-            Regex::new(r"\r\n|\r|\n")
-                .unwrap()
-                .split(&t)
-                .map(str::trim)
-                .filter(|l| !l.is_empty())
-                .collect::<Vec<&str>>()
-                .join("; ")
-        }
-        _ => text.to_string(),
-    }
-}
-
-// TODO
-fn parse_start_end(code: &str) -> String {
-    code.to_string()
-}
 
 /**
 ### `ParseError`
 */
 #[derive(Debug)]
 pub enum Error {
-    FunctionNotFound(String),
-    ParameterNotFound(String),
-    CallCodeNotFound(String),
+    Function(String),
+    Parameter(String),
+    CallCode(String),
 }
 
 /**
@@ -155,7 +53,7 @@ impl CollectionData {
     into [`CollectionData`]
     */
     pub fn from_file(path: impl AsRef<Path>) -> Result<CollectionData, Box<dyn std::error::Error>> {
-        Ok(from_reader::<File, CollectionData>(File::open(path)?)?)
+        Ok(serde_yaml::from_reader::<File, CollectionData>(File::open(path)?)?)
     }
 
     /**
@@ -385,7 +283,7 @@ impl FunctionData {
             } else if let Some(code_string) = if revert { &self.revert_code } else { &self.code } {
                 code_string.to_string()
             } else {
-                return Err(Error::CallCodeNotFound(self.name.clone()));
+                return Err(Error::CallCode(self.name.clone()));
             }
         };
 
@@ -427,7 +325,7 @@ impl FunctionData {
                             .unwrap()
                             .replace_all(&parsed, "")
                         } else {
-                            return Err(Error::ParameterNotFound(pdd.name.clone()));
+                            return Err(Error::Parameter(pdd.name.clone()));
                         }
                     }
                 }
@@ -452,7 +350,7 @@ impl FunctionData {
 
 - 💡 [Expressions (templating)](./README.md#expressions) can be used as parameter value
 */
-pub type FunctionCallParametersData = Value;
+pub type FunctionCallParametersData = serde_yaml::Value;
 
 /**
 ### `FunctionCall`
@@ -493,7 +391,7 @@ impl FunctionCallData {
         funcs
             .as_ref()
             .and_then(|vec_fd| vec_fd.iter().find(|fd| fd.name == self.function))
-            .map_or(Err(Error::FunctionNotFound(self.function.clone())), |fd| {
+            .map_or(Err(Error::Function(self.function.clone())), |fd| {
                 fd.parse(&self.parameters, funcs, os, revert)
             })
     }
@@ -600,7 +498,7 @@ impl ScriptData {
         } else if let Some(code_string) = if revert { &self.revert_code } else { &self.code } {
             Ok(beautify(code_string, &self.name, os, revert))
         } else {
-            Err(Error::CallCodeNotFound(self.name.clone()))
+            Err(Error::CallCode(self.name.clone()))
         }
     }
 }

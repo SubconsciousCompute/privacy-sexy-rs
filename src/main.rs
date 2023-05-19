@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use privacy_sexy::{get_collection, run_script, Recommend, OS};
+use privacy_sexy::{self, Recommend, OS};
 
 #[derive(Debug, Parser)]
 #[command(version)]
@@ -30,7 +30,7 @@ enum Commands {
 
 fn main() {
     let cli = Cli::parse();
-    let cd = get_collection(&match std::env::consts::OS {
+    let cd = privacy_sexy::get_collection(&match std::env::consts::OS {
         "macos" => OS::MacOs,
         "linux" => OS::Linux,
         "windows" => OS::Windows,
@@ -55,7 +55,7 @@ fn main() {
     match cli.command {
         Commands::Echo => println!("{script}"),
         Commands::Run => {
-            run_script(&script, cd.scripting.file_extension).unwrap();
+            privacy_sexy::run_script(&script, cd.scripting.file_extension).unwrap();
         }
     }
 }
