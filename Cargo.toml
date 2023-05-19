@@ -9,7 +9,7 @@ authors = [
 description = "Open-source tool to enforce privacy & security best-practices on Windows and MacOs, because privacy is sexy 🍑🍆"
 keywords = ["privacy", "windows", "macos", "yaml", "security"]
 readme = "README.md"
-homepage = "https://github.com/sn99/privacy-sexy"
+homepage = "https://github.com/SubconsciousCompute/privacy-sexy"
 license = "MIT"
 
 [dependencies]

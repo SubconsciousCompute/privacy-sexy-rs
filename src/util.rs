@@ -127,7 +127,8 @@ Supported global variables:
 - $homepage
 - $version
 
-For more info & examples, refer to [parameter substitution](./README.md#parameter-substitution)
+Refer to [parameter substitution](https://github.com/SubconsciousCompute/privacy-sexy/blob/master/src/README.md#parameter-substitution)
+for more info & usage examples
 */
 pub fn parse_start_end(code_string: &str) -> String {
     let cargo_params =

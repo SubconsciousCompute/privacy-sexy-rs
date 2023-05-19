@@ -1,12 +1,12 @@
-/**
+/*!
 - privacy-sexy is a data-driven application where it reads the necessary OS-specific logic from
-  yaml files in [`collections`](https://github.com/sn99/privacy-sexy/tree/master/collections)
+  yaml files in [`collections`](https://github.com/SubconsciousCompute/privacy-sexy/tree/master/collections)
 - 💡 Best practices
-  - If you repeat yourself, try to utilize [YAML-defined functions](FunctionData)
-  - Always try to add documentation and a way to revert a tweak in [scripts](ScriptData)
-- 📖 Types in code: [`collections.rs`](https://github.com/sn99/privacy-sexy/blob/master/src/collection.rs)
+  - If you repeat yourself, try to utilize [YAML-defined functions](collection::FunctionData)
+  - Always try to add documentation and a way to revert a tweak in [scripts](collection::ScriptData)
+- 📖 Types in code: [`collections.rs`](https://github.com/SubconsciousCompute/privacy-sexy/blob/master/src/collection.rs)
 */
-mod collection;
+pub mod collection;
 mod util;
 
 pub use collection::{CollectionData, Recommend};
@@ -38,7 +38,7 @@ impl OS {
 
     # Panics
 
-    Panics if current operating system is not supported!
+    Panics if current operating system is not supported
     */
     pub fn get_system_os() -> Self {
         match std::env::consts::OS {
@@ -55,7 +55,7 @@ Main way to get rules in form of [`CollectionData`]
 
 # Errors
 
-Refer to [`from_file`](CollectionData)
+Refer to [`from_file`](CollectionData::from_file)
 
 # Panics
 
