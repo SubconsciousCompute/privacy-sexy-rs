@@ -123,11 +123,11 @@ struct PkgParams {
 Substitutes global variables in `code_string`
 
 Supported global variables:
-- date
-- homepage
-- version
+- $date
+- $homepage
+- $version
 
-For more info, refer to [parameter substitution](./README.md#parameter-substitution)
+For more info & examples, refer to [parameter substitution](./README.md#parameter-substitution)
 */
 pub fn parse_start_end(code_string: &str) -> String {
     let cargo_params =

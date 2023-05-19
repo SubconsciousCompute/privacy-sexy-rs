@@ -1,10 +1,11 @@
-//! - privacy-sexy is a data-driven application where it reads the necessary OS-specific logic from
-//!   yaml files in [`collections`](https://github.com/sn99/privacy-sexy/tree/master/collections)
-//! - 💡 Best practices
-//!   - If you repeat yourself, try to utilize [YAML-defined functions](FunctionData)
-//!   - Always try to add documentation and a way to revert a tweak in [scripts](ScriptData)
-//! - 📖 Types in code: [`collections.rs`](https://github.com/sn99/privacy-sexy/blob/master/src/collection.rs)
-
+/**
+- privacy-sexy is a data-driven application where it reads the necessary OS-specific logic from
+  yaml files in [`collections`](https://github.com/sn99/privacy-sexy/tree/master/collections)
+- 💡 Best practices
+  - If you repeat yourself, try to utilize [YAML-defined functions](FunctionData)
+  - Always try to add documentation and a way to revert a tweak in [scripts](ScriptData)
+- 📖 Types in code: [`collections.rs`](https://github.com/sn99/privacy-sexy/blob/master/src/collection.rs)
+*/
 mod collection;
 mod util;
 
@@ -31,16 +32,36 @@ pub enum OS {
     Linux,
 }
 
-/// Main way to get rules in form of [`CollectionData`]
-///
-/// # Errors
-///
-/// Refer to [`from_file`](CollectionData)
-///
-/// # Panics
-///
-/// Panics for [`OS::Linux`]
-pub fn get_collection(os: &OS) -> Result<CollectionData, Box<dyn std::error::Error>> {
+impl OS {
+    /**
+    Returns [`OS`] respective to current system
+
+    # Panics
+
+    Panics if current operating system is not supported!
+    */
+    pub fn get_system_os() -> Self {
+        match std::env::consts::OS {
+            "macos" => OS::MacOs,
+            "linux" => OS::Linux,
+            "windows" => OS::Windows,
+            _ => panic!("Unsupported OS!"),
+        }
+    }
+}
+
+/**
+Main way to get rules in form of [`CollectionData`]
+
+# Errors
+
+Refer to [`from_file`](CollectionData)
+
+# Panics
+
+Panics for [`OS::Linux`]
+*/
+pub fn get_collection(os: OS) -> Result<CollectionData, Box<dyn std::error::Error>> {
     let mut coll_file = PathBuf::from("collections");
 
     coll_file.push(match os {
@@ -52,14 +73,16 @@ pub fn get_collection(os: &OS) -> Result<CollectionData, Box<dyn std::error::Err
     CollectionData::from_file(coll_file)
 }
 
-/// Runs the script
-///
-/// # Errors
-///
-/// Returns [`Err`] if it is unable to:
-/// - write to the temp script file OR
-/// - change it's permissions (for unix) OR
-/// - execute the script
+/**
+Runs the script
+
+# Errors
+
+Returns [`Err`] if it is unable to:
+- write to the temp script file OR
+- change it's permissions (for unix) OR
+- execute the script
+*/
 pub fn run_script(
     script_string: &str,
     file_extension: Option<String>,

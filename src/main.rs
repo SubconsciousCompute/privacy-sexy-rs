@@ -6,37 +6,32 @@ use privacy_sexy::{self, Recommend, OS};
 struct Cli {
     #[command(subcommand)]
     command: Commands,
-    /// Recommend Strict
+    /// Recommend strict
     #[arg(short = 't', long)]
     strict: bool,
-    /// Recommend Standard
+    /// Recommend standard
     #[arg(short = 'd', long)]
     standard: bool,
-    /// Name of Script(s) required
+    /// Name of script(s) required
     #[arg(short, long)]
     name: Vec<String>,
-    /// Revert
+    /// Revert script(s)
     #[arg(short, long)]
     revert: bool,
 }
 
+/// Commands
 #[derive(Debug, Subcommand)]
 enum Commands {
-    /// Generate & Print the script
+    /// Generate & print the script
     Echo,
-    /// Generate & Run the script
+    /// Generate & run the script
     Run,
 }
 
 fn main() {
     let cli = Cli::parse();
-    let cd = privacy_sexy::get_collection(&match std::env::consts::OS {
-        "macos" => OS::MacOs,
-        "linux" => OS::Linux,
-        "windows" => OS::Windows,
-        _ => panic!("Unsupported OS!"),
-    })
-    .unwrap();
+    let cd = privacy_sexy::get_collection(OS::get_system_os()).unwrap();
 
     let script = cd
         .parse(

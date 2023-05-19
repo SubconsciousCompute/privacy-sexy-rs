@@ -5,16 +5,16 @@ use crate::{
 
 use regex::{Captures, Regex};
 use serde::{Deserialize, Serialize};
-use serde_yaml;
-use std::{fs::File, path::Path};
+use std::{error::Error, fs::File, path::Path};
 
-/**
-### `ParseError`
-*/
+/// Error type emitted during parsing
 #[derive(Debug)]
-pub enum Error {
+pub enum ParseError {
+    /// Function not found! Emitted with the name of the [`FunctionData`]
     Function(String),
+    /// Parameter not found! Emitted with the name of the [`ParameterDefinitionData`]
     Parameter(String),
+    /// Both call & code not found! Emitted with the name of the [`ScriptData`]
     CallCode(String),
 }
 
@@ -49,10 +49,9 @@ impl CollectionData {
 
     Returns [`Err`] if:
     - file cannot be opened OR
-    - contents of file cannot be deserialized
-    into [`CollectionData`]
+    - contents of file cannot be deserialized into [`CollectionData`]
     */
-    pub fn from_file(path: impl AsRef<Path>) -> Result<CollectionData, Box<dyn std::error::Error>> {
+    pub fn from_file(path: impl AsRef<Path>) -> Result<CollectionData, Box<dyn Error>> {
         Ok(serde_yaml::from_reader::<File, CollectionData>(File::open(path)?)?)
     }
 
@@ -61,21 +60,21 @@ impl CollectionData {
 
     # Errors
 
-    Returns [`Error`] if the object is not parsable
+    Returns [`ParseError`] if the object is not parsable
     */
     pub fn parse(
         &self,
         names: Option<&Vec<String>>,
         revert: bool,
         recommend: Option<Recommend>,
-    ) -> Result<String, Error> {
+    ) -> Result<String, ParseError> {
         Ok(format!(
             "{}\n\n\n{}\n\n\n{}",
             parse_start_end(&self.scripting.start_code),
             self.actions
                 .iter()
                 .map(|action| action.parse(names, &self.functions, &self.os, revert, recommend))
-                .collect::<Result<Vec<String>, Error>>()?
+                .collect::<Result<Vec<String>, ParseError>>()?
                 .into_iter()
                 .filter(|s| !s.is_empty())
                 .collect::<Vec<String>>()
@@ -110,7 +109,7 @@ impl CategoryData {
 
     # Errors
 
-    Returns [`Error`] if the object is not parsable
+    Returns [`ParseError`] if the object is not parsable
     */
     pub fn parse(
         &self,
@@ -119,7 +118,7 @@ impl CategoryData {
         os: &OS,
         revert: bool,
         recommend: Option<Recommend>,
-    ) -> Result<String, Error> {
+    ) -> Result<String, ParseError> {
         let (names, recommend) = if names.map_or(false, |ns| ns.contains(&self.category)) {
             (None, None)
         } else {
@@ -130,7 +129,7 @@ impl CategoryData {
             .children
             .iter()
             .map(|child| child.parse(names, funcs, os, revert, recommend))
-            .collect::<Result<Vec<String>, Error>>()?
+            .collect::<Result<Vec<String>, ParseError>>()?
             .into_iter()
             .filter(|s| !s.is_empty())
             .collect::<Vec<String>>()
@@ -154,7 +153,7 @@ impl CategoryOrScriptData {
 
     # Errors
 
-    Returns [`Error`] if the object is not parsable
+    Returns [`ParseError`] if the object is not parsable
     */
     fn parse(
         &self,
@@ -163,7 +162,7 @@ impl CategoryOrScriptData {
         os: &OS,
         revert: bool,
         recommend: Option<Recommend>,
-    ) -> Result<String, Error> {
+    ) -> Result<String, ParseError> {
         match self {
             CategoryOrScriptData::CategoryData(data) => data.parse(names, funcs, os, revert, recommend),
             CategoryOrScriptData::ScriptData(data) => data.parse(names, funcs, os, revert, recommend),
@@ -268,7 +267,7 @@ impl FunctionData {
 
     # Errors
 
-    Returns [`Error`] if the object is not parsable
+    Returns [`ParseError`] if the object is not parsable
     */
     fn parse(
         &self,
@@ -276,14 +275,14 @@ impl FunctionData {
         funcs: &Option<Vec<FunctionData>>,
         os: &OS,
         revert: bool,
-    ) -> Result<String, Error> {
+    ) -> Result<String, ParseError> {
         let mut parsed = {
             if let Some(fcd) = &self.call {
                 fcd.parse(funcs, os, revert)?
             } else if let Some(code_string) = if revert { &self.revert_code } else { &self.code } {
                 code_string.to_string()
             } else {
-                return Err(Error::CallCode(self.name.clone()));
+                return Err(ParseError::CallCode(self.name.clone()));
             }
         };
 
@@ -325,7 +324,7 @@ impl FunctionData {
                             .unwrap()
                             .replace_all(&parsed, "")
                         } else {
-                            return Err(Error::Parameter(pdd.name.clone()));
+                            return Err(ParseError::Parameter(pdd.name.clone()));
                         }
                     }
                 }
@@ -385,13 +384,13 @@ impl FunctionCallData {
 
     # Errors
 
-    Returns [`Error`] if the object is not parsable
+    Returns [`ParseError`] if the object is not parsable
     */
-    fn parse(&self, funcs: &Option<Vec<FunctionData>>, os: &OS, revert: bool) -> Result<String, Error> {
+    fn parse(&self, funcs: &Option<Vec<FunctionData>>, os: &OS, revert: bool) -> Result<String, ParseError> {
         funcs
             .as_ref()
             .and_then(|vec_fd| vec_fd.iter().find(|fd| fd.name == self.function))
-            .map_or(Err(Error::Function(self.function.clone())), |fd| {
+            .map_or(Err(ParseError::Function(self.function.clone())), |fd| {
                 fd.parse(&self.parameters, funcs, os, revert)
             })
     }
@@ -413,14 +412,14 @@ impl FunctionCallsData {
 
     # Errors
 
-    Returns [`Error`] if the object is not parsable
+    Returns [`ParseError`] if the object is not parsable
     */
-    fn parse(&self, funcs: &Option<Vec<FunctionData>>, os: &OS, revert: bool) -> Result<String, Error> {
+    fn parse(&self, funcs: &Option<Vec<FunctionData>>, os: &OS, revert: bool) -> Result<String, ParseError> {
         match &self {
             FunctionCallsData::VecFunctionCallData(vec_fcd) => Ok(vec_fcd
                 .iter()
                 .map(|fcd| fcd.parse(funcs, os, revert))
-                .collect::<Result<Vec<String>, Error>>()?
+                .collect::<Result<Vec<String>, ParseError>>()?
                 .into_iter()
                 .filter(|s| !s.is_empty())
                 .collect::<Vec<String>>()
@@ -481,7 +480,7 @@ impl ScriptData {
 
     # Errors
 
-    Returns [`Error`] if the object is not parsable
+    Returns [`ParseError`] if the object is not parsable
     */
     pub fn parse(
         &self,
@@ -490,7 +489,7 @@ impl ScriptData {
         os: &OS,
         revert: bool,
         recommend: Option<Recommend>,
-    ) -> Result<String, Error> {
+    ) -> Result<String, ParseError> {
         if (recommend.is_some() && recommend > self.recommend) || names.map_or(false, |n| !n.contains(&self.name)) {
             Ok(String::new())
         } else if let Some(fcd) = &self.call {
@@ -498,7 +497,7 @@ impl ScriptData {
         } else if let Some(code_string) = if revert { &self.revert_code } else { &self.code } {
             Ok(beautify(code_string, &self.name, os, revert))
         } else {
-            Err(Error::CallCode(self.name.clone()))
+            Err(ParseError::CallCode(self.name.clone()))
         }
     }
 }
