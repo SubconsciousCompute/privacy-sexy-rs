@@ -9,17 +9,17 @@
 pub mod collection;
 mod util;
 
+use collection::CollectionReadError;
 pub use collection::{CollectionData, Recommend};
 
 use serde::{Deserialize, Serialize};
 use std::{
-    env, fs,
-    path::PathBuf,
+    env, fmt, fs,
     process::{Command, ExitStatus},
 };
 
 /// Allowed values for OS
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum OS {
     /// Apple
     #[serde(rename = "macos")]
@@ -50,27 +50,25 @@ impl OS {
     }
 }
 
+impl fmt::Display for OS {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            OS::MacOs => write!(f, "macos"),
+            OS::Linux => write!(f, "linux"),
+            OS::Windows => write!(f, "windows"),
+        }
+    }
+}
+
 /**
 Main way to get rules in form of [`CollectionData`]
 
 # Errors
 
-Refer to [`from_file`](CollectionData::from_file)
-
-# Panics
-
-Panics for [`OS::Linux`]
+Refer to [`CollectionReadError`]
 */
-pub fn get_collection(os: OS) -> Result<CollectionData, Box<dyn std::error::Error>> {
-    let mut coll_file = PathBuf::from("collections");
-
-    coll_file.push(match os {
-        OS::MacOs => "macos.yaml",
-        OS::Linux => panic!("No rules yet!"),
-        OS::Windows => "windows.yaml",
-    });
-
-    CollectionData::from_file(coll_file)
+pub fn get_collection(os: OS) -> Result<CollectionData, CollectionReadError> {
+    CollectionData::from_file(format!("collections/{os}.yaml"))
 }
 
 /**

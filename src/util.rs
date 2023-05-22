@@ -23,7 +23,7 @@ beautify("rm -f ~/.bash_history", "Clear bash history", &OS::Linux, false)
 )
 ```
 */
-pub fn beautify(code_string: &str, name: &str, os: &OS, revert: bool) -> String {
+pub fn beautify(code_string: &str, name: &str, os: OS, revert: bool) -> String {
     let mut name = name.to_string();
     if revert {
         name.push_str(" (revert)");

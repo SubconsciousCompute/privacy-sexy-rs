@@ -5,7 +5,7 @@ use crate::{
 
 use regex::{Captures, Regex};
 use serde::{Deserialize, Serialize};
-use std::{error::Error, fs::File, path::Path};
+use std::{fs::File, io, path::Path};
 
 /// Error type emitted during parsing
 #[derive(Debug)]
@@ -41,17 +41,38 @@ pub struct CollectionData {
     pub functions: Option<Vec<FunctionData>>,
 }
 
+/// Emitted when reading [`CollectionData`] from file fails
+#[derive(Debug)]
+pub enum CollectionReadError {
+    /// Refer to [`io::Error`]
+    IOError(io::Error),
+    /// Refer to [`serde_yaml::Error`]
+    SerdeError(serde_yaml::Error),
+}
+
+impl From<io::Error> for CollectionReadError {
+    fn from(err: io::Error) -> Self {
+        Self::IOError(err)
+    }
+}
+
+impl From<serde_yaml::Error> for CollectionReadError {
+    fn from(err: serde_yaml::Error) -> Self {
+        Self::SerdeError(err)
+    }
+}
+
 impl CollectionData {
     /**
     Reads [`CollectionData`] from file at `path`
 
     # Errors
 
-    Returns [`Err`] if:
+    Returns [`CollectionReadError`] if:
     - file cannot be opened OR
     - contents of file cannot be deserialized into [`CollectionData`]
     */
-    pub fn from_file(path: impl AsRef<Path>) -> Result<CollectionData, Box<dyn Error>> {
+    pub fn from_file(path: impl AsRef<Path>) -> Result<CollectionData, CollectionReadError> {
         Ok(serde_yaml::from_reader::<File, CollectionData>(File::open(path)?)?)
     }
 
@@ -73,7 +94,7 @@ impl CollectionData {
             parse_start_end(&self.scripting.start_code),
             self.actions
                 .iter()
-                .map(|action| action.parse(names, &self.functions, &self.os, revert, recommend))
+                .map(|action| action.parse(names, &self.functions, self.os, revert, recommend))
                 .collect::<Result<Vec<String>, ParseError>>()?
                 .into_iter()
                 .filter(|s| !s.is_empty())
@@ -115,7 +136,7 @@ impl CategoryData {
         &self,
         names: Option<&Vec<String>>,
         funcs: &Option<Vec<FunctionData>>,
-        os: &OS,
+        os: OS,
         revert: bool,
         recommend: Option<Recommend>,
     ) -> Result<String, ParseError> {
@@ -159,7 +180,7 @@ impl CategoryOrScriptData {
         &self,
         names: Option<&Vec<String>>,
         funcs: &Option<Vec<FunctionData>>,
-        os: &OS,
+        os: OS,
         revert: bool,
         recommend: Option<Recommend>,
     ) -> Result<String, ParseError> {
@@ -280,7 +301,7 @@ impl FunctionData {
         &self,
         params: &Option<FunctionCallParametersData>,
         funcs: &Option<Vec<FunctionData>>,
-        os: &OS,
+        os: OS,
         revert: bool,
     ) -> Result<String, ParseError> {
         let mut parsed = {
@@ -396,7 +417,7 @@ impl FunctionCallData {
 
     Returns [`ParseError`] if the object is not parsable
     */
-    fn parse(&self, funcs: &Option<Vec<FunctionData>>, os: &OS, revert: bool) -> Result<String, ParseError> {
+    fn parse(&self, funcs: &Option<Vec<FunctionData>>, os: OS, revert: bool) -> Result<String, ParseError> {
         funcs
             .as_ref()
             .and_then(|vec_fd| vec_fd.iter().find(|fd| fd.name == self.function))
@@ -424,7 +445,7 @@ impl FunctionCallsData {
 
     Returns [`ParseError`] if the object is not parsable
     */
-    fn parse(&self, funcs: &Option<Vec<FunctionData>>, os: &OS, revert: bool) -> Result<String, ParseError> {
+    fn parse(&self, funcs: &Option<Vec<FunctionData>>, os: OS, revert: bool) -> Result<String, ParseError> {
         match &self {
             FunctionCallsData::VecFunctionCallData(vec_fcd) => Ok(vec_fcd
                 .iter()
@@ -496,7 +517,7 @@ impl ScriptData {
         &self,
         names: Option<&Vec<String>>,
         funcs: &Option<Vec<FunctionData>>,
-        os: &OS,
+        os: OS,
         revert: bool,
         recommend: Option<Recommend>,
     ) -> Result<String, ParseError> {
