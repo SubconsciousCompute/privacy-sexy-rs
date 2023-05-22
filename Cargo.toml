@@ -26,5 +26,4 @@ glob = "0.3.1"
 [profile.release]
 codegen-units = 1
 lto = true
-panic = "abort"
-strip = true
+opt-level = 3
