@@ -4,7 +4,7 @@ use glob::glob;
 use privacy_sexy::collection::CollectionData;
 
 #[test]
-fn test() {
+fn parse_test() {
     for fpath in glob("tests/collections/*.yml").unwrap() {
         let fpath = fpath.unwrap();
 

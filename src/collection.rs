@@ -1,6 +1,7 @@
 use std::{fs::File, io, path::Path};
 
 use regex::{Captures, Regex};
+use reqwest::{blocking::get, IntoUrl};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -44,22 +45,30 @@ pub struct CollectionData {
 
 /// Emitted when reading [`CollectionData`] from file fails
 #[derive(Debug)]
-pub enum CollectionReadError {
+pub enum CollectionError {
     /// Refer to [`io::Error`]
     IOError(io::Error),
     /// Refer to [`serde_yaml::Error`]
     SerdeError(serde_yaml::Error),
+    /// Refer to [`reqwest::Error`]
+    ReqwestError(reqwest::Error),
 }
 
-impl From<io::Error> for CollectionReadError {
+impl From<io::Error> for CollectionError {
     fn from(err: io::Error) -> Self {
         Self::IOError(err)
     }
 }
 
-impl From<serde_yaml::Error> for CollectionReadError {
+impl From<serde_yaml::Error> for CollectionError {
     fn from(err: serde_yaml::Error) -> Self {
         Self::SerdeError(err)
+    }
+}
+
+impl From<reqwest::Error> for CollectionError {
+    fn from(err: reqwest::Error) -> Self {
+        Self::ReqwestError(err)
     }
 }
 
@@ -69,12 +78,25 @@ impl CollectionData {
 
     # Errors
 
-    Returns [`CollectionReadError`] if:
+    Returns [`CollectionError`] if:
     - file cannot be opened OR
-    - contents of file cannot be deserialized into [`CollectionData`]
+    - contents cannot be deserialized into [`CollectionData`]
     */
-    pub fn from_file(path: impl AsRef<Path>) -> Result<CollectionData, CollectionReadError> {
+    pub fn from_file(path: impl AsRef<Path>) -> Result<CollectionData, CollectionError> {
         Ok(serde_yaml::from_reader::<File, CollectionData>(File::open(path)?)?)
+    }
+
+    /**
+    Fetches [`CollectionData`] from `url`
+
+    # Errors
+
+    Returns [`CollectionError`] if:
+    - `url` cannot be fetched OR
+    - contents cannot be deserialized into [`CollectionData`]
+    */
+    pub fn from_url(url: impl IntoUrl) -> Result<CollectionData, CollectionError> {
+        Ok(serde_yaml::from_slice::<CollectionData>(&get(url)?.bytes()?)?)
     }
 
     /**
