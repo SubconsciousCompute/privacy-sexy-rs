@@ -1,11 +1,12 @@
+use std::{fs::File, io, path::Path};
+
+use regex::{Captures, Regex};
+use serde::{Deserialize, Serialize};
+
 use crate::{
     util::{beautify, parse_start_end, piper},
     OS,
 };
-
-use regex::{Captures, Regex};
-use serde::{Deserialize, Serialize};
-use std::{fs::File, io, path::Path};
 
 /// Error type emitted during parsing
 #[derive(Debug)]
