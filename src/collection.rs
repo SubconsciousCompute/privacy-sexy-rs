@@ -108,7 +108,7 @@ impl CollectionData {
     */
     pub fn parse(
         &self,
-        names: Option<&Vec<String>>,
+        names: Option<&Vec<&str>>,
         revert: bool,
         recommend: Option<Recommend>,
     ) -> Result<String, ParseError> {
@@ -157,13 +157,13 @@ impl CategoryData {
     */
     fn parse(
         &self,
-        names: Option<&Vec<String>>,
+        names: Option<&Vec<&str>>,
         funcs: &Option<Vec<FunctionData>>,
         os: OS,
         revert: bool,
         recommend: Option<Recommend>,
     ) -> Result<String, ParseError> {
-        let (names, recommend) = if names.map_or(false, |ns| ns.contains(&self.category)) {
+        let (names, recommend) = if names.map_or(false, |ns| ns.contains(&self.category.as_str())) {
             (None, None)
         } else {
             (names, recommend)
@@ -201,7 +201,7 @@ impl CategoryOrScriptData {
     */
     fn parse(
         &self,
-        names: Option<&Vec<String>>,
+        names: Option<&Vec<&str>>,
         funcs: &Option<Vec<FunctionData>>,
         os: OS,
         revert: bool,
@@ -538,13 +538,15 @@ impl ScriptData {
     */
     fn parse(
         &self,
-        names: Option<&Vec<String>>,
+        names: Option<&Vec<&str>>,
         funcs: &Option<Vec<FunctionData>>,
         os: OS,
         revert: bool,
         recommend: Option<Recommend>,
     ) -> Result<String, ParseError> {
-        if (recommend.is_some() && recommend > self.recommend) || names.map_or(false, |n| !n.contains(&self.name)) {
+        if (recommend.is_some() && recommend > self.recommend)
+            || names.map_or(false, |n| !n.contains(&self.name.as_str()))
+        {
             Ok(String::new())
         } else if let Some(fcd) = &self.call {
             Ok(beautify(&fcd.parse(funcs, os, revert)?, &self.name, os, revert))
