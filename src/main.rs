@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use privacy_sexy::{self, Recommend, OS};
+use privacy_sexy::{self, collection::Recommend, OS};
 
 #[derive(Debug, Parser)]
 #[command(version)]

@@ -9,14 +9,13 @@
 pub mod collection;
 mod util;
 
-use collection::CollectionReadError;
-pub use collection::{CollectionData, Recommend};
-
-use serde::{Deserialize, Serialize};
 use std::{
     env, fmt, fs,
     process::{Command, ExitStatus},
 };
+
+use collection::{CollectionData, CollectionReadError};
+use serde::{Deserialize, Serialize};
 
 /// Allowed values for OS
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]

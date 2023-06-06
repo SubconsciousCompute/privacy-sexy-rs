@@ -1,16 +1,17 @@
-use crate::OS;
+use std::fs;
 
 use chrono::Local;
 use regex::{Captures, Regex};
 use serde::{Deserialize, Serialize};
-use std::fs;
+
+use crate::OS;
 
 /**
 Wraps the `code_string` in comments and adds an echo call
 
 # Examples
 
-```no_run
+```ignore
 assert_eq!(r#"
 ## ------------------------------------------------------------
 ## ---------------------Clear bash history---------------------
@@ -53,7 +54,7 @@ Panics for invalid regex expressions
 
 # Examples
 
-```no_run
+```ignore
 assert_eq!("\"^\"\"Hello\"^\"\"", piper("escapeDoubleQuotes", "\"Hello\""));
 ```
 */
