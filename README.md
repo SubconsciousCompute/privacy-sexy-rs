@@ -8,9 +8,11 @@ Open-source tool to enforce privacy & security best-practices on Windows and Mac
 - privacy-sexy is a data-driven application where it reads the necessary OS-specific logic from
   yaml files in [`collections`](collections)
 - 💡 Best practices
-    - If you repeat yourself, try to utilize [YAML-defined functions](FunctionData)
-    - Always try to add documentation and a way to revert a tweak in [scripts](ScriptData)
+  - If you repeat yourself, try to utilize [YAML-defined functions](FunctionData)
+  - Always try to add documentation and a way to revert a tweak in [scripts](ScriptData)
 - 📖 Types in code: [`collections.rs`](src/collection.rs)
+
+> Note: This is a rust port of [privacy.sexy](https://github.com/undergroundwires/privacy.sexy)
 
 ## Usage
 

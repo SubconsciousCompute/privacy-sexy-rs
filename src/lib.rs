@@ -5,6 +5,8 @@
   - If you repeat yourself, try to utilize [YAML-defined functions](collection::FunctionData)
   - Always try to add documentation and a way to revert a tweak in [scripts](collection::ScriptData)
 - 📖 Types in code: [`collections.rs`](https://github.com/SubconsciousCompute/privacy-sexy/blob/master/src/collection.rs)
+
+Note: This is a rust port of [privacy.sexy](https://github.com/undergroundwires/privacy.sexy)
 */
 pub mod collection;
 mod util;
