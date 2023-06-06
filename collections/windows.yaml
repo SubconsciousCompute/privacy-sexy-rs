@@ -5994,7 +5994,7 @@ functions:
           {{ with $default }} $defaultValue = {{ . }} {{ end }}
           $setDefaultOnWindows10 = {{ with $default }} $true # {{ end }} $false
           $setDefaultOnWindows11 = {{ with $setDefaultOnWindows11 }} $true # {{ end }} $false
-          
+
           $osVersion = [System.Environment]::OSVersion.Version
           function Test-IsWindows10 { ($osVersion.Major -eq 10) -and ($osVersion.Build -lt 22000) }
           function Test-IsWindows11 { ($osVersion.Major -gt 10) -or (($osVersion.Major -eq 10) -and ($osVersion.Build -ge 22000)) }
@@ -6085,7 +6085,7 @@ functions:
           } else {
               Write-Host "`"$serviceName`" is not running, no need to stop."
           }
-          
+
           # -- 3. Skip if already disabled
           $startupType = $service.StartType # Does not work before .NET 4.6.1
           if(!$startupType) {
@@ -6151,23 +6151,25 @@ functions:
     parameters:
       - name: message
       - name: ignoreWindows11 # Ignores warning message on Windows 11, allowed values: true | false, default: false
+        optional: true
       - name: ignoreWindows10 # Ignores warning message on Windows 10, allowed values: true | false, default: false
+        optional: true
     call:
       function: RunPowerShell
       parameters:
         code: |-
           $warningMessage = '{{ $message }}'
-          
+
           $ignoreWindows10 = {{ with $ignoreWindows10 }} $true # {{ end }} $false
           $ignoreWindows11 = {{ with $ignoreWindows11 }} $true # {{ end }} $false
-          
+
           $osVersion = [System.Environment]::OSVersion.Version
           function Test-IsWindows10 { ($osVersion.Major -eq 10) -and ($osVersion.Build -lt 22000) }
           function Test-IsWindows11 { ($osVersion.Major -gt 10) -or (($osVersion.Major -eq 10) -and ($osVersion.Build -ge 22000)) }
-          
+
           if (($ignoreWindows10 -and (Test-IsWindows10)) -or ($ignoreWindows11 -and (Test-IsWindows11))) {
               exit 0 # Skip
           }
-          
+
           Write-Warning "$warningMessage"
         # revertCode: No warnings needed when reverting

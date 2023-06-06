@@ -2,15 +2,28 @@
 name = "privacy-sexy"
 version = "0.1.1"
 edition = "2021"
-authors = ["sn99 <siddharthn.099@gmail.com>"]
+authors = [
+  "sn99 <siddharthn.099@gmail.com>",
+  "arghyadipchak <arghyadip.chak16@gmail.com",
+]
 description = "Open-source tool to enforce privacy & security best-practices on Windows and MacOs, because privacy is sexy 🍑🍆"
 keywords = ["privacy", "windows", "macos", "yaml", "security"]
 readme = "README.md"
-homepage = "https://github.com/sn99/privacy-sexy"
+homepage = "https://github.com/SubconsciousCompute/privacy-sexy"
 license = "MIT"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-serde = {version = "1.0.144", features = ["derive"]}
-serde_yaml = "0.9.11"
+chrono = "0.4.24"
+clap = { version = "4.2.7", features = ["derive"] }
+regex = "1.8.1"
+serde = { version = "1.0.162", features = ["derive"] }
+serde_yaml = "0.9.21"
+toml = "0.7.4"
+
+[dev-dependencies]
+glob = "0.3.1"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3

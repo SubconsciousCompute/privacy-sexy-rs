@@ -6,13 +6,13 @@
 Open-source tool to enforce privacy & security best-practices on Windows and MacOs, because privacy is sexy 🍑🍆
 
 - privacy-sexy is a data-driven application where it reads the necessary OS-specific logic from
-  yaml files in [`collections`](https://github.com/sn99/privacy-sexy/tree/master/collections)
+  yaml files in [`collections`](collections)
 - 💡 Best practices
     - If you repeat yourself, try to utilize [YAML-defined functions](FunctionData)
     - Always try to add documentation and a way to revert a tweak in [scripts](ScriptData)
-- 📖 Types in code: [`collections.rs`](https://github.com/sn99/privacy-sexy/blob/master/src/collection.rs)
+- 📖 Types in code: [`collections.rs`](src/collection.rs)
 
-Usage:
+## Usage
 
 - Preferred way
 ```rust
@@ -25,18 +25,13 @@ fn main() {
 
 - Option 1
 ```rust
-use std::fs::File;
-
 use privacy_sexy::CollectionData;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let filename = "collections/windows.yaml";
-
-    let file = File::open(filename)?;
-    let deser: CollectionData = serde_yaml::from_reader(file)?;
-
+    
+    let deser = CollectionData::from_file(filename)?;
     println!("{:#?}", deser);
-
     Ok(())
 }
 ```
@@ -66,6 +61,27 @@ fn main() -> Result<(), serde_yaml::Error> {
         }
     }
 }
+```
+
+## Cli
+
+```rust
+Commands
+
+Usage: privacy-sexy [OPTIONS] <COMMAND>
+
+Commands:
+  echo  Generate & print the script
+  run   Generate & run the script
+  help  Print this message or the help of the given subcommand(s)
+
+Options:
+  -t, --strict       Recommend strict
+  -d, --standard     Recommend standard
+  -n, --name <NAME>  Name of script(s) required
+  -r, --revert       Revert script(s)
+  -h, --help         Print help
+  -V, --version      Print version
 ```
 
 Refer to [`docs`](https://github.com/undergroundwires/privacy.sexy/tree/master/docs) for external documentation
