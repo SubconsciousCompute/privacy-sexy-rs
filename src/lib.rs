@@ -14,7 +14,7 @@ use std::{
     process::{Command, ExitStatus},
 };
 
-use collection::{CollectionData, CollectionReadError};
+use collection::{CollectionData, CollectionError};
 use serde::{Deserialize, Serialize};
 
 /// Allowed values for OS
@@ -64,9 +64,9 @@ Main way to get rules in form of [`CollectionData`]
 
 # Errors
 
-Refer to [`CollectionReadError`]
+Refer to [`CollectionError`]
 */
-pub fn get_collection(os: OS) -> Result<CollectionData, CollectionReadError> {
+pub fn get_collection(os: OS) -> Result<CollectionData, CollectionError> {
     CollectionData::from_file(format!("collections/{os}.yaml"))
 }
 
