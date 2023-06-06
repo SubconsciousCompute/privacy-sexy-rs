@@ -16,68 +16,11 @@ Open-source tool to enforce privacy & security best-practices on Windows and Mac
 
 ## Usage
 
-- Preferred way
-```rust
-use privacy_sexy::OS::Windows;
-
-fn main() {
-    println!("{:#?}", privacy_sexy::get_collection(Windows).unwrap());
-}
-```
-
-- Option 1 (from file)
-```rust
-use privacy_sexy::collection::{CollectionData, CollectionError};
-
-fn main() -> Result<(), CollectionError> {
-    let deser = CollectionData::from_file("collections/windows.yaml")?;
-    println!("{:#?}", deser);
-    Ok(())
-}
-```
-
-- Option 2 (from url)
-```rust
-use privacy_sexy::collection::{CollectionData, CollectionError};
-
-fn main() -> Result<(), CollectionError> {
-    let deser = CollectionData::from_url(
-        "https://raw.githubusercontent.com/SubconsciousCompute/privacy-sexy-rs/master/collections/macos.yaml",
-    )?;
-    println!("{:#?}", deser);
-    Ok(())
-}
-```
-
-- Option 3 (from str)
-```rust
-use std::{fs::File, io::Read};
-
-use privacy_sexy::collection::CollectionData;
-
-fn main() -> Result<(), serde_yaml::Error> {
-    let filename = "collections/windows.yaml";
-
-    match File::open(filename) {
-        Ok(mut file) => {
-            let mut content = String::new();
-            file.read_to_string(&mut content).unwrap();
-
-            let deser: CollectionData = serde_yaml::from_str(&content)?;
-            println!("{:#?}", deser);
-            Ok(())
-        }
-        Err(error) => {
-            println!("Error opening file {}: {}", filename, error);
-            Ok(())
-        }
-    }
-}
-```
+See [`examples`](examples)
 
 ## Cli
 
-```rust
+```sh
 Commands
 
 Usage: privacy-sexy [OPTIONS] <COMMAND>

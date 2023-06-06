@@ -31,11 +31,13 @@ enum Commands {
 
 fn main() {
     let cli = Cli::parse();
+    let names = cli.name.iter().map(String::as_str).collect::<Vec<_>>();
+
     let cd = privacy_sexy::get_collection(OS::get_system_os()).unwrap();
 
     let script = cd
         .parse(
-            if cli.name.is_empty() { None } else { Some(&cli.name) },
+            if names.is_empty() { None } else { Some(&names) },
             cli.revert,
             if cli.strict {
                 Some(Recommend::Strict)
