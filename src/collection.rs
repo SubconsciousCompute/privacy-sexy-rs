@@ -104,10 +104,10 @@ impl CollectionData {
             self.actions
                 .iter()
                 .map(|action| action.parse(names, &self.functions, self.os, revert, recommend))
-                .collect::<Result<Vec<String>, ParseError>>()?
+                .collect::<Result<Vec<_>, _>>()?
                 .into_iter()
                 .filter(|s| !s.is_empty())
-                .collect::<Vec<String>>()
+                .collect::<Vec<_>>()
                 .join("\n\n\n"),
             parse_start_end(&self.scripting.end_code),
         ))
@@ -159,10 +159,10 @@ impl CategoryData {
             .children
             .iter()
             .map(|child| child.parse(names, funcs, os, revert, recommend))
-            .collect::<Result<Vec<String>, ParseError>>()?
+            .collect::<Result<Vec<_>, _>>()?
             .into_iter()
             .filter(|s| !s.is_empty())
-            .collect::<Vec<String>>()
+            .collect::<Vec<_>>()
             .join("\n\n\n"))
     }
 }
@@ -459,10 +459,10 @@ impl FunctionCallsData {
             FunctionCallsData::VecFunctionCallData(vec_fcd) => Ok(vec_fcd
                 .iter()
                 .map(|fcd| fcd.parse(funcs, os, revert))
-                .collect::<Result<Vec<String>, ParseError>>()?
+                .collect::<Result<Vec<_>, _>>()?
                 .into_iter()
                 .filter(|s| !s.is_empty())
-                .collect::<Vec<String>>()
+                .collect::<Vec<_>>()
                 .join("\n\n")),
             FunctionCallsData::FunctionCallData(fcd) => fcd.parse(funcs, os, revert),
         }
