@@ -12,7 +12,7 @@ pub mod collection;
 mod util;
 
 use std::{
-    env, fmt, fs,
+    env, fmt, fs, io,
     process::{Command, ExitStatus},
 };
 
@@ -82,10 +82,7 @@ Returns [`Err`] if it is unable to:
 - change it's permissions (for unix) OR
 - execute the script
 */
-pub fn run_script(
-    script_string: &str,
-    file_extension: Option<String>,
-) -> Result<ExitStatus, Box<dyn std::error::Error>> {
+pub fn run_script(script_string: &str, file_extension: Option<String>) -> Result<ExitStatus, io::Error> {
     let mut tmp_file = env::temp_dir();
     tmp_file.push("privacy-sexy");
     if let Some(ext) = file_extension {
@@ -100,5 +97,5 @@ pub fn run_script(
         fs::set_permissions(&tmp_file, fs::Permissions::from_mode(0o755))?;
     }
 
-    Ok(Command::new(tmp_file.to_str().unwrap_or_default()).spawn()?.wait()?)
+    Command::new(tmp_file.to_str().unwrap_or_default()).spawn()?.wait()
 }
