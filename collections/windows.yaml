@@ -35,19 +35,131 @@ actions:
               del /f /q %ProgramFiles(x86)%\Steam\Dumps
               del /f /q %ProgramFiles(x86)%\Steam\Traces
               del /f /q %ProgramFiles(x86)%\Steam\appcache\*.log
-          - name: Clear Visual Studio telemetry and feedback data
-            recommend: standard
-            code: |-
-              rmdir /s /q "%AppData%\vstelemetry" 2>nul
-              rmdir /s /q "%LocalAppData%\Microsoft\VSApplicationInsights" 2>nul
-              rmdir /s /q "%ProgramData%\Microsoft\VSApplicationInsights" 2>nul
-              rmdir /s /q "%Temp%\Microsoft\VSApplicationInsights" 2>nul
-              rmdir /s /q "%Temp%\VSFaultInfo" 2>nul
-              rmdir /s /q "%Temp%\VSFeedbackPerfWatsonData" 2>nul
-              rmdir /s /q "%Temp%\VSFeedbackVSRTCLogs" 2>nul
-              rmdir /s /q "%Temp%\VSRemoteControl" 2>nul
-              rmdir /s /q "%Temp%\VSTelem" 2>nul
-              rmdir /s /q "%Temp%\VSTelem.Out" 2>nul
+          - category: Clear Visual Studio data
+            docs: |-
+              Visual Studio is an integrated development environment (IDE) from Microsoft that is used to develop software [1].
+              Visual Studio store data such as your usage of the software and also information about your hardware [2].
+              The data is stored both in Microsoft cloud [3] and locally on computer.
+              These scripts allow you to delete the local data that might reveal your personally identifiable data about you
+              or the way you use the product.
+
+              [1]: https://en.wikipedia.org/wiki/Visual_Studio "Visual Studio | Wikipedia"
+              [2]: https://learn.microsoft.com/en-us/visualstudio/ide/visual-studio-experience-improvement-program "Visual Studio Customer Experience Improvement Program | Microsoft Learn"
+              [3]: https://www.infoworld.com/article/2609774/microsoft-reinvents-visual-studio-as-an-azure-cloud-service.html "Microsoft reinvents Visual Studio as an Azure cloud service | InfoWorld"
+            children:
+              - category: Clear Visual Studio telemetry and feedback data
+                docs: |-
+                  These scripts delete data about you and your behavior that's locally stored by Visual Studio on your computer.
+                  These do not clear data that's already collected in Microsoft servers, but it can prevent sending more data by
+                  deleting data waiting to be sent.
+                children:
+                  - name: Delete offline Visual Studio telemetry files
+                    recommend: standard
+                    docs: |-
+                      SQM files are text files that are created and used by Microsoft [1].
+                      SQM stands for "Service Quality Monitoring" [1].
+
+                      When unable to connect to internet Visual Studio stores SQM files in `%LocalAppData%\Microsoft\VSCommon\<vs_version>\SQM` [2].
+                      The number of files grows continuously and it can get to thousands. Cleaning these files speeds up Visual
+                      Studio significantly according to community reports [2].
+
+                      [1]: https://techshift.net/how-to-open-sqm-file/ "What is a .SQM File And How To Open It - Microsoft (Visual Guide) | TechShift.net"
+                      [2]: https://stackoverflow.com/a/38862596 "Process monitor - Slow Visual Studio, related to SQMClient? | Stack Overflow"
+                    code: |-
+                      rmdir /s /q %LocalAppData%\Microsoft\VSCommon\14.0\SQM
+                      rmdir /s /q %LocalAppData%\Microsoft\VSCommon\15.0\SQM
+                      rmdir /s /q %LocalAppData%\Microsoft\VSCommon\16.0\SQM
+                      rmdir /s /q %LocalAppData%\Microsoft\VSCommon\17.0\SQM
+                  - name: Delete Visual Studio Application Insights logs
+                    recommend: standard
+                    docs: |-
+                      Application Insights for Visual Studio stores diagnostic data for e.g. exceptions and performance [1].
+
+                      Application Insights store `.TRN` files that might grow and exceed thousands [2] [3].
+
+                      [1]: https://azuredevopslabs.com/labs/vsts/monitor/ "Monitoring Applications using Application Insights | Azure DevOps Hands-on-Labs"
+                      [2]: https://developercommunity.visualstudio.com/t/visual-studio-freezes-randomly/224181#T-N257722-N277241-N407607 "Visual Studio freezes randomly | Visual Studio Feedback"
+                      [3]: https://stackoverflow.com/a/53754481 "Visual Studio 2017 (15.3.1) keeps hanging/freezing | Stack Overflow"
+                    code: |-
+                      rmdir /s /q "%LocalAppData%\Microsoft\VSApplicationInsights" 2>nul
+                      rmdir /s /q "%ProgramData%\Microsoft\VSApplicationInsights" 2>nul
+                      rmdir /s /q "%Temp%\Microsoft\VSApplicationInsights" 2>nul
+                  - name: Delete Visual Studio telemetry folders
+                    recommend: standard
+                    docs: |-
+                      `vstelemetry` is a folder created by both Visual Studio [1] and also by SQL Server Management Studio [2] to
+                      store telemetry data.
+
+                      There has been security vulnerabilities through these folders that were patched in 2020 by Microsoft [2].
+
+                      [1]: http://processchecker.com/file/VsHub.exe.html "What is VsHub.exe ? VsHub.exe info | Processchecker.com"
+                      [2]: https://herolab.usd.de/en/security-advisories/usd-2020-0030/ "usd-2020-0030 - usd HeroLab"
+                    code: |-
+                      rmdir /s /q "%AppData%\vstelemetry" 2>nul
+                      rmdir /s /q "%ProgramData%\vstelemetry" 2>nul
+                  - name: Delete Visual Studio temporary telemetry and log data
+                    recommend: standard
+                    docs: |-
+                      These logs area created by different tools that Visual Studio uses such as its launcher, installer or
+                      data collection agents.
+
+                      Folders include `VSFaultInfo` [1], `VSFeedbackPerfWatsonData` [2], `VSFeedbackCollector` [2],
+                      `VSFeedbackVSRTCLogs` [3], `VSRemoteControl` [4] [5], `VSFeedbackIntelliCodeLogs` [4] [5],
+                      `VSTelem` [6] [7], `VSTelem.Out` [6].
+
+                      There are more log and cache data stored by Visual Studio, but not all of them come with privacy
+                      implications. These files can be useful for faster loading, so this script removes only the
+                      sensitive data stored instead of cleaning all the cache completely.
+
+                      [1]: https://developercommunity.visualstudio.com/t/visual-studio-installer-crashes-after-updating-to/1356122 "Visual Studio Installer crashes after updating to version 16.9.0 - Visual Studio Feedback | Visual Studio Develoepr Community"
+                      [2]: https://developercommunity.visualstudio.com/t/microsoft-visual-studio-1/588200#T-N588861-N594783 "MSTF help | Visual Studio Developer Community"
+                      [3]: https://github.com/MicrosoftDocs/live-share/issues/3584 "Agent logs in %TEMP%\VSFeedbackVSRTCLogs taking up over 87GB · Issue #3584 · MicrosoftDocs/live-share | GitHub"
+                      [4]: https://developercommunity.visualstudio.com/t/please-keep-my-temp-folder-clean/731637 "Please keep my TEMP folder clean! - Visual Studio Feedback | Visual Studio Developer Community"
+                      [5]: https://stackoverflow.com/q/60974427 "Reduce log and other temporary file creation in Visual Studio 2019 | Stack Overflow"
+                      [6]: https://stackoverflow.com/q/72341126 "Visual Studio 2022 - Telemetry | Stack Overflow"
+                      [7]: https://social.msdn.microsoft.com/Forums/vstudio/en-US/5b2a0baa-748f-40e0-b504-f6dfad9b7b4d/vstelem-folder-24000-files-2064kb?forum=msbuild "VSTELEM folder 24000 files 2064Kb | MSDN Forums"
+                    code: |-
+                      rmdir /s /q "%Temp%\VSFaultInfo" 2>nul
+                      rmdir /s /q "%Temp%\VSFeedbackPerfWatsonData" 2>nul
+                      rmdir /s /q "%Temp%\VSFeedbackVSRTCLogs" 2>nul
+                      rmdir /s /q "%Temp%\VSFeedbackIntelliCodeLogs" 2>nul
+                      rmdir /s /q "%Temp%\VSRemoteControl" 2>nul
+                      rmdir /s /q "%Temp%\Microsoft\VSFeedbackCollector" 2>nul
+                      rmdir /s /q "%Temp%\VSTelem" 2>nul
+                      rmdir /s /q "%Temp%\VSTelem.Out" 2>nul
+              - category: Clear Visual Studio licenses
+                docs: |-
+                  Visual Studio stores a local copy of your product key. This information is kept even though
+                  Visual Studio is uninstalled [1] which may reveal unnecessary data and not be desired.
+                  This key is not only stored for purchased Visual Studio products but also for the free trials.
+
+                  [1]: https://stackoverflow.com/questions/12465361/how-to-change-visual-studio-2012-2013-or-2015-license-key "How to change Visual Studio 2012,2013 or 2015 License Key? | Stack Overflow"
+                children:
+                  - name: Clear Visual Studio 2010 licenses
+                    docs: '[How to change Visual Studio 2012,2013 or 2015 License Key? | Stack Overflow](https://stackoverflow.com/a/14810695)'
+                    code: reg delete "HKCR\Licenses\77550D6B-6352-4E77-9DA3-537419DF564B" /va /f
+                  - name: Clear Visual Studio 2015 licenses
+                    docs: '[How to change Visual Studio 2012,2013 or 2015 License Key? | Stack Overflow](https://stackoverflow.com/a/32482322)'
+                    code: reg delete "HKCR\Licenses\4D8CFBCB-2F6A-4AD2-BABF-10E28F6F2C8F" /va /f
+                  - name: Clear Visual Studio 2017 licenses
+                    docs: '[Is Visual Studio Community a 30 day trial? | Stack Overflow](https://stackoverflow.com/a/51570570)'
+                    code: reg delete "HKCR\Licenses\5C505A59-E312-4B89-9508-E162F8150517" /va /f
+                  - name: Clear Visual Studio 2019 licenses
+                    docs: '[How to change Visual Studio 2017 License Key? | Stack Overflow](https://stackoverflow.com/a/46974337)'
+                    code: reg delete "HKCR\Licenses\41717607-F34E-432C-A138-A3CFD7E25CDA" /va /f
+                  - name: Clear Visual Studio 2022 licenses
+                    docs: |-
+                      Different keys have been reported by community for VS 2022 license [1]. This may depend on different preview versions.
+                      The latest reported key is `1299B4B9-DFCC-476D-98F0-F65A2B46C96D` [2] [3]. I have tested and verified this along with some
+                      other keys of preview versions. This scripts deletes all mentioned keys.
+
+                      [1]: https://github.com/beatcracker/VSCELicense/issues/14 "VS 2022 key discussion | beatcracker/VSCELicense | GitHub"
+                      [2]: https://learn.microsoft.com/en-us/answers/questions/673243/how-do-i-remove-a-license-from-visual-studio-2022.html "MSFT Answer | Microsoft Learn"
+                      [3]: https://stackoverflow.com/a/71624750 "How to change Visual Studio 2017 License Key? | Stack Overflow"
+                    code: |-
+                      reg delete "HKCR\Licenses\B16F0CF0-8AD1-4A5B-87BC-CB0DBE9C48FC" /va /f
+                      reg delete "HKCR\Licenses\10D17DBA-761D-4CD8-A627-984E75A58700" /va /f
+                      reg delete "HKCR\Licenses\1299B4B9-DFCC-476D-98F0-F65A2B46C96D" /va /f
           - category: Clear most recently used lists (MRU)
             children:
               - category: Clear Quick Access (jump) lists
@@ -1433,60 +1545,162 @@ actions:
   - category: Configure programs
     children:
       - category: Disable Visual Studio data collection
+        docs: |-
+          These scripts disable future local and cloud data collection by Visual Studio about you and your behavior.
+          These do not clean existing data collected about you locally or on cloud servers.
         children:
-          - category: Disable Experience Improvement Program (PerfWatson)
-            docs:
-              - https://docs.microsoft.com/en-us/visualstudio/ide/visual-studio-experience-improvement-program
-              - https://devblogs.microsoft.com/visualstudio/how-we-use-your-perfwatson-data-to-identify-unresponsive-areas/
-            children:
-              - name: Disable SQM OS key
-                recommend: standard
-                code: |-
-                  if %PROCESSOR_ARCHITECTURE%==x86 ( REM is 32 bit?
-                      reg add "HKLM\SOFTWARE\Microsoft\VSCommon\14.0\SQM" /v "OptIn" /t REG_DWORD /d 0 /f
-                      reg add "HKLM\SOFTWARE\Microsoft\VSCommon\15.0\SQM" /v "OptIn" /t REG_DWORD /d 0 /f
-                      reg add "HKLM\SOFTWARE\Microsoft\VSCommon\16.0\SQM" /v "OptIn" /t REG_DWORD /d 0 /f
-                  ) else (
-                      reg add "HKLM\SOFTWARE\Wow6432Node\Microsoft\VSCommon\14.0\SQM" /v "OptIn" /t REG_DWORD /d 0 /f
-                      reg add "HKLM\SOFTWARE\Wow6432Node\Microsoft\VSCommon\15.0\SQM" /v "OptIn" /t REG_DWORD /d 0 /f
-                      reg add "HKLM\SOFTWARE\Wow6432Node\Microsoft\VSCommon\16.0\SQM" /v "OptIn" /t REG_DWORD /d 0 /f
-                  )
-                revertCode: |-
-                  if %PROCESSOR_ARCHITECTURE%==x86 ( REM is 32 bit?
-                      reg add "HKLM\SOFTWARE\Microsoft\VSCommon\14.0\SQM" /v "OptIn" /t REG_DWORD /d 1 /f
-                      reg add "HKLM\SOFTWARE\Microsoft\VSCommon\15.0\SQM" /v "OptIn" /t REG_DWORD /d 1 /f
-                      reg add "HKLM\SOFTWARE\Microsoft\VSCommon\16.0\SQM" /v "OptIn" /t REG_DWORD /d 1 /f
-                  ) else (
-                      reg add "HKLM\SOFTWARE\Wow6432Node\Microsoft\VSCommon\14.0\SQM" /v "OptIn" /t REG_DWORD /d 1 /f
-                      reg add "HKLM\SOFTWARE\Wow6432Node\Microsoft\VSCommon\15.0\SQM" /v "OptIn" /t REG_DWORD /d 1 /f
-                      reg add "HKLM\SOFTWARE\Wow6432Node\Microsoft\VSCommon\16.0\SQM" /v "OptIn" /t REG_DWORD /d 1 /f
-                  )
-              - name: Disable SQM group policy
-                recommend: standard
-                code: reg add "HKLM\Software\Policies\Microsoft\VisualStudio\SQM" /v "OptIn" /t REG_DWORD /d 0 /f
-                revertCode: reg add "HKLM\Software\Policies\Microsoft\VisualStudio\SQM" /v "OptIn" /t REG_DWORD /d 1 /f
-          - name: Disable visual studio telemetry
+          - name: Opt-out from Visual Studio Customer Experience Improvement Program (VSCEIP)
+            recommend: standard
+            docs: |-
+              `VSCEIP` collects information about errors, computer hardware, and how people use Visual Studio [1].
+              The information is sent to Microsoft servers for further analysis.
+
+              This was previously known as Customer Experience Improvement Program (`PerfWatson`) for Visual Studio
+              that primarily collected your personal usage and related performance data [2].
+
+              For more information about the information collected, processed, or transmitted by the `VSCEIP`, see the
+              [Microsoft Privacy Statement](https://privacy.microsoft.com/en-US/privacystatement).
+
+              Visual Studio uses different keys based on CPU architecture of the host operating system (32bit or 64bit) [1]:
+
+              - 32bit: `HKLM\SOFTWARE\Microsoft\VSCommon`
+              - 64bit: `HKLM\SOFTWARE\Wow6432Node\Microsoft\VSCommon`
+
+              Key `OptIn` can have two different values [1]:
+
+              - `0` is opted out (turn off)
+              - `1` is opted in (turn on)
+
+              The default installation sets the key as `1` (opt-in by default) since Visual Studio 2022.
+
+              [1]: https://learn.microsoft.com/en-us/visualstudio/ide/visual-studio-experience-improvement-program "Customer Experience Improvement Program - Visual Studio (Windows) | Microsoft Learn"
+              [2]: https://devblogs.microsoft.com/visualstudio/how-we-use-your-perfwatson-data-to-identify-unresponsive-areas/ "How we use your PerfWatson data to identify Unresponsive areas | Visual Studio Blog"
+            code: |-
+              :: Using OS keys
+              if %PROCESSOR_ARCHITECTURE%==x86 ( REM is 32 bit?
+                  reg add "HKLM\SOFTWARE\Microsoft\VSCommon\14.0\SQM" /v "OptIn" /t REG_DWORD /d 0 /f
+                  reg add "HKLM\SOFTWARE\Microsoft\VSCommon\15.0\SQM" /v "OptIn" /t REG_DWORD /d 0 /f
+                  reg add "HKLM\SOFTWARE\Microsoft\VSCommon\16.0\SQM" /v "OptIn" /t REG_DWORD /d 0 /f
+                  reg add "HKLM\SOFTWARE\Microsoft\VSCommon\17.0\SQM" /v "OptIn" /t REG_DWORD /d 0 /f
+              ) else (
+                  reg add "HKLM\SOFTWARE\Wow6432Node\Microsoft\VSCommon\14.0\SQM" /v "OptIn" /t REG_DWORD /d 0 /f
+                  reg add "HKLM\SOFTWARE\Wow6432Node\Microsoft\VSCommon\15.0\SQM" /v "OptIn" /t REG_DWORD /d 0 /f
+                  reg add "HKLM\SOFTWARE\Wow6432Node\Microsoft\VSCommon\16.0\SQM" /v "OptIn" /t REG_DWORD /d 0 /f
+                  reg add "HKLM\SOFTWARE\Wow6432Node\Microsoft\VSCommon\17.0\SQM" /v "OptIn" /t REG_DWORD /d 0 /f
+              )
+              :: Using GPO key
+              reg add "HKLM\Software\Policies\Microsoft\VisualStudio\SQM" /v "OptIn" /t REG_DWORD /d 0 /f
+            revertCode: |-
+              :: Using OS keys
+              if %PROCESSOR_ARCHITECTURE%==x86 ( REM is 32 bit?
+                  reg add "HKLM\SOFTWARE\Microsoft\VSCommon\14.0\SQM" /v "OptIn" /t REG_DWORD /d 1 /f
+                  reg add "HKLM\SOFTWARE\Microsoft\VSCommon\15.0\SQM" /v "OptIn" /t REG_DWORD /d 1 /f
+                  reg add "HKLM\SOFTWARE\Microsoft\VSCommon\16.0\SQM" /v "OptIn" /t REG_DWORD /d 1 /f
+                  reg add "HKLM\SOFTWARE\Microsoft\VSCommon\17.0\SQM" /v "OptIn" /t REG_DWORD /d 1 /f
+              ) else (
+                  reg add "HKLM\SOFTWARE\Wow6432Node\Microsoft\VSCommon\14.0\SQM" /v "OptIn" /t REG_DWORD /d 1 /f
+                  reg add "HKLM\SOFTWARE\Wow6432Node\Microsoft\VSCommon\15.0\SQM" /v "OptIn" /t REG_DWORD /d 1 /f
+                  reg add "HKLM\SOFTWARE\Wow6432Node\Microsoft\VSCommon\16.0\SQM" /v "OptIn" /t REG_DWORD /d 1 /f
+                  reg add "HKLM\SOFTWARE\Wow6432Node\Microsoft\VSCommon\17.0\SQM" /v "OptIn" /t REG_DWORD /d 1 /f
+              )
+              :: Using GPO key
+              reg delete "HKLM\Software\Policies\Microsoft\VisualStudio\SQM" /v "OptIn" /f 2>nul
+          - name: Disable Visual Studio telemetry
+            docs: |-
+              This key was first seen to be used in Visual Studio 15 (2017) [1] [2].
+
+              By default (after clean installation) the registry key set by this script does not exist
+              since Visual Studio 2022.
+
+              [1]: https://developercommunity.visualstudio.com/t/bad-crashes-when-visualstudiotelemetryturnoffswitc/208693 "Bad crashes when VisualStudio\Telemetry\TurnOffSwitch is set to 0 | Visual Studio Feedback"
+              [2]: https://social.msdn.microsoft.com/Forums/vstudio/en-US/7796f0c5-ec9a-4fc8-9f62-584a663f9016/vs2015-pro-upd-3-quotthe-application-cannot-startquot-exception-in-obtainoptinstatus 'VS2015 (pro + upd 3): "Forum post showing logs for TurnOffSwitch key | MSDN Forums'
             recommend: standard
             code: reg add "HKCU\Software\Microsoft\VisualStudio\Telemetry" /v "TurnOffSwitch" /t REG_DWORD /d 1 /f
-            revertCode: reg add "HKCU\Software\Microsoft\VisualStudio\Telemetry" /v "TurnOffSwitch" /t REG_DWORD /d 0 /f
+            revertCode: reg delete "HKCU\Software\Microsoft\VisualStudio\Telemetry" /v "TurnOffSwitch" /f 2>nul
           - name: Disable Visual Studio feedback
+            docs: |-
+              Feedback tool in Visual Studio allows users to report a problem from either Visual Studio or its installer.
+              It collects rich diagnostic information along with personally identifiable information [1]. Information includes large log files,
+              crash information, screenshots, repro recording, and other artifacts [1].
+
+              This script disables feedback dialog and screenshot capture/email input that's prompted to be sent as part of the feedback.
+
+              By default (after clean installation) the registry keys are not configured/set since Visual Studio 2022. Having these settings no
+              set imply that feedback is enabled.
+
+              [1]: https://learn.microsoft.com/en-us/visualstudio/ide/how-to-report-a-problem-with-visual-studio "Report a problem with Visual Studio - Visual Studio (Windows) | Microsoft Learn"
             recommend: standard
             code: |-
               reg add "HKLM\SOFTWARE\Policies\Microsoft\VisualStudio\Feedback" /v "DisableFeedbackDialog" /t REG_DWORD /d 1 /f
               reg add "HKLM\SOFTWARE\Policies\Microsoft\VisualStudio\Feedback" /v "DisableEmailInput" /t REG_DWORD /d 1 /f
               reg add "HKLM\SOFTWARE\Policies\Microsoft\VisualStudio\Feedback" /v "DisableScreenshotCapture" /t REG_DWORD /d 1 /f
             revertCode: |-
-              reg add "HKLM\SOFTWARE\Policies\Microsoft\VisualStudio\Feedback" /v "DisableFeedbackDialog" /t REG_DWORD /d 0 /f
-              reg add "HKLM\SOFTWARE\Policies\Microsoft\VisualStudio\Feedback" /v "DisableEmailInput" /t REG_DWORD /d 0 /f
-              reg add "HKLM\SOFTWARE\Policies\Microsoft\VisualStudio\Feedback" /v "DisableScreenshotCapture" /t REG_DWORD /d 0 /f
+              reg delete "HKLM\SOFTWARE\Policies\Microsoft\VisualStudio\Feedback" /v "DisableFeedbackDialog" /f 2>nul
+              reg delete "HKLM\SOFTWARE\Policies\Microsoft\VisualStudio\Feedback" /v "DisableEmailInput" /f 2>nul
+              reg delete "HKLM\SOFTWARE\Policies\Microsoft\VisualStudio\Feedback" /v "DisableScreenshotCapture" /f 2>nul
           - name: Stop and disable Visual Studio Standard Collector Service
-            # Collects logs for Diagnostics Hub
+            docs: |-
+              Visual Studio Standard Collector Service is a service that is part of
+              [Microsoft Visual Studio and .NET Log Collection Tool](https://www.microsoft.com/en-us/download/details.aspx?id=12493) [1].
+              This service collects logs for Diagnostics Hub just like Diagnostic Hub Standard Collector [2].
+              It has been known to be vulnerable to privilege elavation [3].
+
+              Disabling this service is recommended because otherwise it would:
+              - Increase the attack surface of your computer, making it open to potential future vulnerabilities.
+              - Use computer resources in favor of collecting more data about you and your behavior.
+
+              [1]: https://learn.microsoft.com/en-us/answers/questions/891356/i-can39t-start-vsstandardcollectorservice150.html#answer-929168 "I can't start VSStandardCollectorService150 | Microsoft Q&A"
+              [2]: https://www.atredis.com/blog/cve-2018-0952-privilege-escalation-vulnerability-in-windows-standard-collector-service "CVE-2018-0952: Privilege Escalation Vulnerability in Windows Standard Collector Service | Atredis Partners"
+              [3]: https://msrc.microsoft.com/update-guide/en-US/vulnerability/CVE-2018-0952 "Diagnostic Hub Standard Collector Elevation of Privilege Vulnerability"
             recommend: standard
             call:
               function: DisableService
               parameters:
                 serviceName: VSStandardCollectorService150 # (Get-Service -Name VSStandardCollectorService150).StartType
-                defaultStartupMode: Automatic # Allowed values: Automatic | Manual
+                defaultStartupMode: Manual # Manual since Visual Studio 2022, allowed values: Automatic | Manual
+          - name: Disable Diagnostics Hub log collection
+            docs: |-
+              Diagnostics Hub is online data collection point for diagnostic tools used by Visual Studio.
+              It can be disabled by deleting `LogLevel` and `LogDirectory` registery keys [1] and enabled by adding them [2] [3] [4] [5].
+
+              The registry keys are not set after installation since Visual Studio 2022.
+
+              [1]: https://developercommunity.visualstudio.com/t/cant-disable-diagnostics-hub-in-visual-stuido/1449322#T-N1449680 "Can't disable Diagnostics hub in visual stuido | Visual Studio Feedback"
+              [2]: https://developercommunity.visualstudio.com/t/diagnostic-tool-no-registered-class/1099781#T-N1106849 "diagnostic tool No registered class | Visual Studio Feedback"
+              [3]: https://stackoverflow.com/a/39380284 "c# - Visual Studio 2015 diagnostic tools no longer working | Stack Overflow"
+              [4]: https://developercommunity.visualstudio.com/t/collectionstartfailedhubexception-on-profiler-laun/414212#T-N447791 "CollectionStartFailedHubException on profiler launch | Visual Studio Feedback"
+              [5]: https://developercommunity.visualstudio.com/t/diagnostics-tools-failed-unexpectedly-unable-to-st/437117#T-N447777 "Diagnostics tools failed unexpectedly--unable to start standard collector | Visual Studio Feedback"
+            code: |-
+              reg delete "HKLM\Software\Microsoft\VisualStudio\DiagnosticsHub" /v "LogLevel" /f 2>nul
+            revertCode: |-
+              "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -property catalog_productDisplayVersion >Nul | findstr "15." >nul && (
+                  reg add "HKLM\Software\Microsoft\VisualStudio\DiagnosticsHub" /v "LogLevel" /t REG_SZ /d "All" /f
+              )
+          - name: Opt-out from IntelliCode data collection
+            recommend: standard
+            docs: |-
+              [IntelliCode for Visual Studio](https://learn.microsoft.com/en-us/visualstudio/intellicode/intellicode-visual-studio) provides AI based
+              suggestions for the code.
+
+              IntelliCode does not send any code to Microsoft servers as long as team completion model training is not used [1] [2]. This script opts-out
+              from it without breaking the functionality of IntelliCode for local models.
+
+              The registry keys set by this script do not exist by default after installation since Visual Studio 2022.
+
+              [1]: https://docs.microsoft.com/en-us/visualstudio/intellicode/intellicode-privacy "IntelliCode privacy - Visual Studio IntelliCode | Microsoft Learn"
+              [2]: https://github.com/MicrosoftDocs/intellicode/blob/50ea60c91a7175e749ed5e094403568a583a292e/docs/intellicode-privacy.md
+            code: |-
+              :: Global policy
+              reg add "HKLM\SOFTWARE\Policies\Microsoft\VisualStudio\IntelliCode" /v "DisableRemoteAnalysis" /d 1 /f
+              :: Local policy
+              reg add "HKCU\SOFTWARE\Microsoft\VSCommon\16.0\IntelliCode" /v "DisableRemoteAnalysis" /d 1 /f
+              reg add "HKCU\SOFTWARE\Microsoft\VSCommon\17.0\IntelliCode" /v "DisableRemoteAnalysis" /d 1 /f
+            revertCode: |-
+              :: Global policy
+              reg delete "HKLM\SOFTWARE\Policies\Microsoft\VisualStudio\IntelliCode" /v "DisableRemoteAnalysis" /f 2>nul
+              :: Local policy
+              reg delete "HKCU\SOFTWARE\Microsoft\VSCommon\16.0\IntelliCode" /v "DisableRemoteAnalysis" /f 2>nul
+              reg delete "HKCU\SOFTWARE\Microsoft\VSCommon\17.0\IntelliCode" /v "DisableRemoteAnalysis" /f 2>nul
       - name: Disable NET Core CLI telemetry
         recommend: standard
         code: setx DOTNET_CLI_TELEMETRY_OPTOUT 1
@@ -2124,6 +2338,26 @@ actions:
               reg delete "HKLM\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\KeyExchangeAlgorithms\Diffie-Hellman" /v "ServerMinKeyBitLength" /f
               reg delete "HKLM\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\KeyExchangeAlgorithms\Diffie-Hellman" /v "ClientMinKeyBitLength" /f
               reg delete "HKLM\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\KeyExchangeAlgorithms\Diffie-Hellman" /v "Enabled" /f
+          - name: Increase RSA key exchange to 2048-bit
+            docs: |-
+              In 2012, Microsoft began transitioning minimum RSA key length across various applications from 1024 to 2048 bits.
+              1024-Bit key exchange algorithms are still supported in Windows despite being considered deprecated for some time.
+              NIST 800-131A Rev. 2 cites RSA Key Agreement and Key Transport schemes with len(n) < 2048 are disallowed. Generally,
+              RSA 2048-bit+ key exchange algorithms are widely supported. While supported cipher suites remain a roundabout way to
+              address supported key exchange algorithms, these can also be specified independently (although there are still constraints
+              based on negotiated cipher suite) and provide a supplemental baseline to enforce using strong cryptography.
+
+              This script works by creating the non-default key and value called PKCS at
+              `HKLM\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\KeyExchangeAlgorithms\` with a name of `ClientMinKeyBitLength`
+              and value of `0x00000800` (2048). The revert deletes the `ClientMinKeyBitLength` value.
+
+              See also:
+              - [Transport Layer Security (TLS) registry settings | learn.microsoft.com](https://learn.microsoft.com/en-us/windows-server/security/tls/tls-registry-settings#keyexchangealgorithm---client-rsa-key-sizes)
+              - [Pull request by bricedobson | undergroundwires/privacy.sexy | GitHub.com](https://github.com/undergroundwires/privacy.sexy/pull/165)
+            code: |-
+              reg add "HKLM\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\KeyExchangeAlgorithms\PKCS" /f /v ClientMinKeyBitLength /t REG_DWORD /d 0x00000800
+            revertCode: |-
+              reg delete "HKLM\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\KeyExchangeAlgorithms\PKCS" /v "ClientMinKeyBitLength" /f
           - name: Disable RC2 cipher
             code: |-
               reg add "HKLM\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Ciphers\RC2 40/128" /f /v Enabled /t REG_DWORD /d 0x00000000
@@ -2389,7 +2623,8 @@ actions:
                 # When reverting HKLM\SOFTWARE\Policies profiles are deleted as they are not included in clean installation
                 # On the other hand  "StandardProfile", "DomainProfile" and "PublicProfile" exists HKLM\SYSTEM\CurrentControlSet
                 # so they're not deleted but set to default state
-                revertCode: |- # HKLM\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy
+                revertCode:
+                  |- # HKLM\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy
                   :: Policy based
                   reg delete "HKLM\SOFTWARE\Policies\Microsoft\WindowsFirewall\StandardProfile" /v "EnableFirewall" /f 2>nul
                   reg delete "HKLM\SOFTWARE\Policies\Microsoft\WindowsFirewall\PublicProfile" /v "EnableFirewall" /f 2>nul
@@ -2534,7 +2769,7 @@ actions:
                   - https://www.thewindowsclub.com/how-to-enable-tamper-protection-in-windows-10
                   - https://docs.microsoft.com/en-us/windows/client-management/mdm/defender-csp#configuration-tamperprotection
                 call:
-                  - function: RunInlineCodeAsTrustedInstaller  # Otherwise we get "ERROR: Access is denied." (>= 20H2)
+                  - function: RunInlineCodeAsTrustedInstaller # Otherwise we get "ERROR: Access is denied." (>= 20H2)
                     # ❌ Fails with "ERROR: Access is denied." in Windows 11 21H2 | ✅ Works in Windows 10 >= 20H2
                     parameters:
                       code: reg add "HKLM\SOFTWARE\Microsoft\Windows Defender\Features" /v "TamperProtection" /t REG_DWORD /d "4" /f
@@ -3240,7 +3475,7 @@ actions:
                           - https://www.stigviewer.com/stig/ms_windows_defender_antivirus/2018-03-29/finding/V-75241
                         code: reg add "HKLM\Software\Policies\Microsoft\Windows Defender\Signature Updates" /v "ASSignatureDue" /t REG_DWORD /d 4294967295 /f
                         revertCode: reg delete "HKLM\Software\Policies\Microsoft\Windows Defender\Signature Updates" /v "ASSignatureDue" /f 2>nul
-                      - name: Limit virus security intelligence (signature) updates  # default is one day, recommended is 7 days
+                      - name: Limit virus security intelligence (signature) updates # default is one day, recommended is 7 days
                         # Maximize period when virus security intelligence (signature) is considered up-to-date
                         docs:
                           - https://admx.help/?Category=Windows_10_2016&Policy=Microsoft.Policies.WindowsDefender::SignatureUpdate_AVSignatureDue
@@ -3820,7 +4055,8 @@ actions:
                     code: |-
                       reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" /v "EnableWebContentEvaluation" /t REG_DWORD /d "0" /f
                       reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" /v "EnableWebContentEvaluation" /t REG_DWORD /d "0" /f
-                    revertCode: |- # Has "1" value in "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" as default
+                    revertCode:
+                      |- # Has "1" value in "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" as default
                       reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" /v "EnableWebContentEvaluation" /t REG_DWORD /d "1" /f
                       reg delete "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" /v "EnableWebContentEvaluation" /f 2>nul
       - name: Disable automatic updates
@@ -3844,6 +4080,87 @@ actions:
             parameters:
               serviceName: UsoSvc # Check: (Get-Service -Name 'UsoSvc').StartType
               defaultStartupMode: Automatic # Allowed values: Automatic | Manual
+      - category: Configure handling of downloaded files
+        docs: |-
+          These scripts configures Attachment Manager included in Windows that that takes further actions for
+          files that you receive or download such as storing classification metadata and notfying other software [1].
+
+          [1]: https://support.microsoft.com/en-us/topic/information-about-the-attachment-manager-in-microsoft-windows-c48a4dcd-8de5-2af5-ee9b-cd795ae42738  "Information about the Attachment Manager in Microsoft Windows | support.microsoft.com"
+        children:
+          - name: Prevent saving zone information in downloaded files
+            docs: |-
+              This script disables marking file attachments by using their zone information.
+
+              The default behavior is for Windows to mark file attachments with their zone information [1].
+              The zone information of the origin describe whether the file was downloaded from internet,
+              intranet, local, or restricted zone [1].
+
+              It is used by Attachment Manager that is included in Windows to help protect the computer from
+              unsafe attachments that can be recieved with e-mail message or downloaded from Internet [2].
+              If the Attachment Manager identifies an attachment that might be unsafe, it prevents you from
+              opening the file, or it warns you before you open the file [2].
+
+              Preventing this information to be saved:
+              - Increases privacy by no longer leaking information of source.
+              - Decreases security by preventing Windows to determine risks and take risk-based actions [1].
+              By not preserving the zone information, Windows cannot make proper risk assessments [3].
+              Disabling it has **Significant** criticality as the configuration introduces additional attack
+              surface according to US government [4].
+
+              The Attachment Manager feature warns users when opening or executing files which are marked as
+              being from an untrusted source, unless/until the file's zone information has been removed via
+              the "Unblock" button on the file's properties or via a separate tool such as
+              [Microsoft Sysinternals Streams](https://docs.microsoft.com/en-us/sysinternals/downloads/streams) [4].
+
+              It is configured using `SaveZoneInformation` value in
+              `\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Attachments\` registry subkey [1] [2] [3] [4].
+
+              The value is this setting is confusing, according to Microsoft documentation
+              `1` turns it on [2] [3], `2` turns it off [2] [3]. However, according to STIG V-63841, `1` disables
+              saving zone information and `2` enables it [3]. According to my tests, the STIG interprets it right
+              and `1` disables this function off.
+
+              In clean Windows 10 and 11 installations, this key by default is missing for both `HKCU` and `HKLM`.
+
+              [1]: https://www.stigviewer.com/stig/windows_10/2019-09-25/finding/V-63841 "Zone information must be preserved when saving attachments. | stigviewer.com"
+              [2]: https://support.microsoft.com/en-us/topic/information-about-the-attachment-manager-in-microsoft-windows-c48a4dcd-8de5-2af5-ee9b-cd795ae42738  "Information about the Attachment Manager in Microsoft Windows | support.microsoft.com"
+              [3]: https://admx.help/?Category=Windows_10_2016&Policy=Microsoft.Policies.AttachmentManager::AM_MarkZoneOnSavedAtttachments "Do not preserve zone information in file attachments | admx.help"
+              [4]: https://www.irs.gov/pub/irs-utl/safeguards-scsem-win-11-v1-1-033122.xlsx "Windows 11 SafeGuards | irs.gov"
+            code: reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Attachments" /v "SaveZoneInformation" /t REG_DWORD /d "1" /f
+            revertCode: reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Attachments" /v "SaveZoneInformation" /f 2>nul
+          - name: Prevent notifying antivirus programs of downloaded files
+            docs: |-
+              Prevents Windows from calling the registered antivirus programs when file attachments are opened [1] [2].
+
+              Windows registered antivirus programs for downloaded files from Internet or through e-mail attachments [1].
+              If multiple programs are registered, they will all be notified [1] [3].
+              This is disabled by default, so even if you do not configure run this script, Windows does not call the registered
+              antivirus programs when file attachments are opened [1].
+
+              If it is enabled, Windows blocks file from being opened when antivirus program fails [1]. It is the recommended setting
+              by Microsoft [1].
+
+              Preventing calling antivirus:
+              - Increases privacy by not sharing your file data proactively with installed antiviruses.
+              - Decreases by detecting and mitigating potential malicious software. Disabling it has **Moderate**
+              criticality as it is not an appropriate antivirus configuration according to US government [4].
+
+              An updated antivirus program must be installed for this policy setting to function properly [4].
+
+              It is configured using `ScanWithAntiVirus` value in
+              `\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Attachments\` registry subkey [1] [2] [3] [4].
+              `3` enables the scans [1] [2] [3], `1` disables it [1] [3], and `2` leaves it optional [1].
+
+              In clean Windows 10 and 11 installations, this key by default comes with `3` value in
+              `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Attachments\ScanWithAntiVirus`,
+              and key is missing for `HKCU`.
+
+              [1]: https://support.microsoft.com/en-us/topic/information-about-the-attachment-manager-in-microsoft-windows-c48a4dcd-8de5-2af5-ee9b-cd795ae42738  "Information about the Attachment Manager in Microsoft Windows | support.microsoft.com"
+              [2]: https://www.stigviewer.com/stig/windows_server_2008_r2_member_server/2015-09-02/finding/V-14270  "The system will notify antivirus when file attachments are opened. | stigviewer.com"
+              [3]: https://admx.help/?Category=Windows_10_2016&Policy=Microsoft.Policies.AttachmentManager::AM_CallIOfficeAntiVirus "Notify antivirus programs when opening attachments | admx.help"
+              [4]: https://www.irs.gov/pub/irs-utl/safeguards-scsem-win-11-v1-1-033122.xlsx "Windows 11 SafeGuards | irs.gov"
+            code: reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Attachments" /v "ScanWithAntiVirus" /t REG_DWORD /d "1" /f
+            revertCode: reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Attachments" /v "ScanWithAntiVirus" /t REG_DWORD /d "3" /f
   - category: UI for privacy
     children:
       - name: Disable lock screen app notifications
@@ -4954,87 +5271,322 @@ actions:
                   parameters:
                     packageName: Windows.PrintDialog
       - category: Remove OneDrive
+        docs: |-
+          Microsoft OneDrive (formerly SkyDrive) is a file hosting service operated by Microsoft [1].
+          First launched in August 2007, it enables registered users to share and synchronize their files [1].
+
+          Data stored on OneDrive is subject to monitoring by Microsoft [2].
+          There's been reports of Microsoft accessing and altering your personal files when syncing on OneDrive [3] [4].
+
+          Uninstalling OneDrive is recommended by Microsoft to optimize Windows VDIs [5].
+
+          [1]: https://en.wikipedia.org/wiki/OneDrive "OneDrive | Wikipedia"
+          [2]: https://en.wikipedia.org/w/index.php?title=OneDrive&oldid=1111615560#Privacy_concerns "OneDrive | Privacy concerns | Wikipedia"
+          [3]: https://web.archive.org/web/20191002180755/https://www.intralinks.com/blog/2014/04/microsoft-onedrive-business-can-alter-files-syncs   "Microsoft OneDrive for Business can Alter Your Files as It Syncs | Intralinks"
+          [4]: https://thehackernews.com/2014/04/microsoft-onedrive-secretly-modifies.html "Microsoft OneDrive Secretly Modifies your BackUp Files | thehackernews.com"
+          [5]: https://learn.microsoft.com/en-us/windows-server/remote/remote-desktop-services/rds_vdi-recommendations-1909#remove-onedrive-components "Optimizing Windows 10, version 1909, for a Virtual Desktop Infrastructure (VDI) role | Microsoft Learn"
         children:
           - name: Kill OneDrive process
             recommend: strict
-            code: taskkill /f /im OneDrive.exe
-            revertCode: '"%LOCALAPPDATA%\Microsoft\OneDrive\OneDrive.exe"'
+            docs: |-
+              It stops the execution of OneDrive.
+              Main OneDrive process is `OneDrive.exe` and it is installed in `<local-app-data>\Microsoft\OneDrive\OneDrive.exe` [1] [2] [3] [4].
+
+              [1]: https://answers.microsoft.com/en-us/windows/forum/all/onedrive-wont-sync-and-wont-uninstall-so-i-can-re/6182d0a5-e7ea-46bb-a058-c0a4fd5e299a "Onedrive wont sync and wont uninstall so I can re-install the latest - Microsoft Community | answers.microsoft.com"
+              [2]: https://social.technet.microsoft.com/Forums/scriptcenter/en-US/9bd33f03-62dd-4c4f-9d29-970c1016f2f9/better-onedrive-detection-method?forum=configmanagerapps "Better OneDrive detection method | social.technet.microsoft.com"
+              [3]: https://social.msdn.microsoft.com/Forums/en-US/072e3577-d0ff-4950-9e0b-40b037853881/starting-and-stopping-sharepoint-library-sync-with-onedrive?forum=sharepointdevelopmentprevious "Starting and stopping SharePoint library sync with OneDrive | social.msdn.microsoft.com"
+              [4]: https://learn.microsoft.com/en-us/answers/questions/473995/onedrive-was-previously-disabled-and-now-i-can39t.html "OneDrive was previously disabled and now I can't enable it with GPO - Microsoft Q&A | learn.microsoft.com"
+            call:
+              function: KillProcess
+              parameters:
+                processName: OneDrive.exe
+                processStartPath: '%LOCALAPPDATA%\Microsoft\OneDrive\OneDrive.exe'
+                processStartArgs: /background
+          - name: Remove OneDrive from startup
+            recommend: strict
+            docs: |-
+              OneDrive starts on every boot in both Windows 10 and 11.
+              It's started through `OneDrive` `REG_SZ` entry in `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` [1].
+              The startup command is `"<local-app-data>\Microsoft\OneDrive\OneDrive.exe" /background` [1].
+
+              [1]: https://techcommunity.microsoft.com/t5/azure-virtual-desktop/start-onedrive-when-using-a-remoteapp-in-wvd/m-p/899331 "Re: Start OneDrive when using a RemoteApp in WVD - Page 2 - Microsoft Tech Community | techcommunity.microsoft.com"
+            code: reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v "OneDrive" /f 2>nul
+            revertCode: reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v "OneDrive" /t REG_SZ /d "\"%LOCALAPPDATA%\Microsoft\OneDrive\OneDrive.exe\" /background" /f
           - name: Uninstall OneDrive
+            docs: |-
+              This script will call official Microsoft uninstaller that will uninstall the application but residual files will be left.
+              You won't lose data by uninstalling OneDrive from computer because they will be stored in cloud [1].
+
+              Running OneDrive client setup package (`OneDriveSetup.exe`) with the `/uninstall` command line switch uninstalls OneDrive [2] [3].
+              On Windows 10, the setup package is found on different folders (`System32` or `SysWOW64`) based on the CPU architecture [4].
+              On Windows 11, the setup package is always inside `System32` regarding of the CPU architecture.
+
+              Uninstalling OneDrive is recommended by Microsoft to optimize Windows VDIs [5].
+
+              [1]: https://support.microsoft.com/en-us/office/turn-off-disable-or-uninstall-onedrive-f32a17ce-3336-40fe-9c38-6efb09f944b0 "Turn off, disable, or uninstall OneDrive | support.microsoft.com"
+              [2]: https://learn.microsoft.com/en-us/sharepoint/troubleshoot/installation-and-setup/how-to-block-onedrive-from-being-advertised-after-install-office-2016#method-2-uninstall-onedriveexe "How to block OneDrive.exe from being advertised after you install Office 2016 - SharePoint | Microsoft Learn"
+              [3]: https://learn.microsoft.com/en-us/sharepoint/troubleshoot/lists-and-libraries/cannot-open-onedrive-on-images-using-sysprep#how-to-correctly-deploy-onedrive-via-sysprep "Can't open OneDrive on images using Sysprep - SharePoint | Microsoft Learn"
+              [4]: https://answers.microsoft.com/en-us/windows/forum/all/onedrive-on-windows-11-does-not-appear-in-file/250c679b-9d02-410f-8c8f-41cca112ccfa "OneDrive on Windows 11 - Does Not Appear in File Explorer - Microsoft Community | answers.microsoft.com"
+              [5]: https://learn.microsoft.com/en-us/windows-server/remote/remote-desktop-services/rds_vdi-recommendations-1909#remove-onedrive-components "Optimizing Windows 10, version 1909, for a Virtual Desktop Infrastructure (VDI) role | Microsoft Learn"
             recommend: strict
             code: |-
-              if %PROCESSOR_ARCHITECTURE%==x86 (
-                  %SystemRoot%\System32\OneDriveSetup.exe /uninstall 2>nul
+              if exist "%SystemRoot%\System32\OneDriveSetup.exe" (
+                  "%SystemRoot%\System32\OneDriveSetup.exe" /uninstall
               ) else (
-                  %SystemRoot%\SysWOW64\OneDriveSetup.exe /uninstall 2>nul
+                  if exist "%SystemRoot%\SysWOW64\OneDriveSetup.exe" (
+                      "%SystemRoot%\SysWOW64\OneDriveSetup.exe" /uninstall
+                  ) else (
+                      echo Failed to uninstall, uninstaller could not be found. 1>&2
+                  )
               )
             revertCode: |-
-              if %PROCESSOR_ARCHITECTURE%==x86 (
-                  %SystemRoot%\System32\OneDriveSetup.exe /silent
+              if exist "%SystemRoot%\System32\OneDriveSetup.exe" (
+                  "%SystemRoot%\System32\OneDriveSetup.exe" /silent
               ) else (
-                  %SystemRoot%\SysWOW64\OneDriveSetup.exe /silent
+                  if exist "%SystemRoot%\SysWOW64\OneDriveSetup.exe" (
+                      "%SystemRoot%\SysWOW64\OneDriveSetup.exe" /silent
+                  ) else (
+                      echo Failed to install, installer could not be found. 1>&2
+                  )
               )
-          - name: Remove OneDrive leftovers
+          - name: Remove OneDrive files
             recommend: strict
+            docs: |-
+              This script cleans OneDrive files such as installation directories, application data,
+              and temporary files and cache.
+
+              - `C:\OneDriveCache`: Temporary cache location [1].
+              - `C:\ProgramData\Microsoft OneDrive`: Program data, used during setup [2] [3], seen on both Windows 10 and 11.
+              - `C:\Users\<username>\Microsoft OneDrive`: OneDrive root directory [4], seen on both Windows 10 and 11.
+              - `C:\Users\<username>\AppData\Local\Microsoft\OneDrive`: OneDrive installation directory [5], seen on both Windows 10 and 11.
+
+              The folders are reported by the community [1].
+
+              [1]: https://social.microsoft.com/Forums/en-US/53263a51-856f-4e64-bc0e-a689d4cc5a8b/release-notes-for-1907-build-29711727413?forum=FSLogix "Release Notes for 1907 - build 2.9.7117.27413 | social.microsoft.com"
+              [2]: https://techcommunity.microsoft.com/t5/sharepoint/onedrive-setup-fails-to-complete/m-p/2072446 "OneDrive setup fails to complete - Microsoft Tech Community"
+              [3]: https://answers.microsoft.com/en-us/msoffice/forum/all/why-does-onedrive-act-as-ransomware/288e5940-b92b-493c-91ff-dafd26279bee "Why does OneDrive act as Ransomware? - Microsoft Community"
+              [4]: https://techcommunity.microsoft.com/t5/onedrive-for-business/change-onedrive-installation-location/m-p/225064 "Change OneDrive installation location - Microsoft Tech Community | techcommunity.microsoft.com"
+              [5]: https://learn.microsoft.com/en-us/sharepoint/install/configure-syncing-with-the-onedrive-sync-app "Configure syncing with the new OneDrive sync app - SharePoint Server | Microsoft Learn | learn.microsoft.com"
             code: |-
-              rd "%UserProfile%\OneDrive" /q /s
-              rd "%LocalAppData%\Microsoft\OneDrive" /q /s
-              rd "%ProgramData%\Microsoft OneDrive" /q /s
-              rd "%SystemDrive%\OneDriveTemp" /q /s
+              :: OneDrive root folder
+              if exist "%UserProfile%\OneDrive" (
+                  rd "%UserProfile%\OneDrive" /q /s
+              )
+              :: OneDrive installation directory
+              if exist "%LocalAppData%\Microsoft\OneDrive" (
+                  rd "%LocalAppData%\Microsoft\OneDrive" /q /s
+              )
+              :: OneDrive data
+              if exist "%ProgramData%\Microsoft OneDrive" (
+                  rd "%ProgramData%\Microsoft OneDrive" /q /s
+              )
+              :: OneDrive cache
+              if exist "%SystemDrive%\OneDriveTemp" (
+                  rd "%SystemDrive%\OneDriveTemp" /q /s
+              )
           - name: Delete OneDrive shortcuts
             recommend: strict
-            docs: https://docs.microsoft.com/en-us/sharepoint/troubleshoot/installation-and-setup/how-to-block-onedrive.exe-from-being-advertised-after-install-office-2016
-            code: |-
-              del "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Microsoft OneDrive.lnk" /s /f /q
-              del "%APPDATA%\Microsoft\Windows\Start Menu\Programs\OneDrive.lnk" /s /f /q
-              del "%USERPROFILE%\Links\OneDrive.lnk" /s /f /q
-          - name: Disable usage of OneDrive
+            docs: |-
+              Even after uninstall or cleaning files there may be shortcuts that links to OneDrive. This script ensures
+              that all the shortcuts are removed from the system. Shortcuts are saved in different locations such as:
+
+              - `Start Menu\Programs\Microsoft OneDrive.lnk`, `Start Menu\Programs\OneDrive.lnk`, `Links\OneDrive.lnk` [1],
+              - `ServiceProfiles\LocalService` and `ServiceProfiles\NetworkService` [2]
+
+              Windows 10 and higher requires additional scripts to delete the OneDrive icon from the navigation pane in Windows Explorer [1].
+
+              [1]: https://docs.microsoft.com/en-us/sharepoint/troubleshoot/installation-and-setup/how-to-block-onedrive.exe-from-being-advertised-after-install-office-2016 "How to block OneDrive.exe from being advertised after you install Office 2016 - SharePoint | Microsoft Learn"
+              [2]: https://learn.microsoft.com/en-us/windows-server/remote/remote-desktop-services/rds_vdi-recommendations-1909#remove-onedrive-components "Optimizing Windows 10, version 1909, for a Virtual Desktop Infrastructure (VDI) role | Microsoft Learn"
+            call:
+              - function: RunInlineCode
+                parameters:
+                  code: |-
+                    if exist "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Microsoft OneDrive.lnk" (
+                        del "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Microsoft OneDrive.lnk" /s /f /q
+                    )
+                    if exist "%APPDATA%\Microsoft\Windows\Start Menu\Programs\OneDrive.lnk" (
+                        del "%APPDATA%\Microsoft\Windows\Start Menu\Programs\OneDrive.lnk" /s /f /q
+                    )
+                    if exist "%USERPROFILE%\Links\OneDrive.lnk" (
+                        del "%USERPROFILE%\Links\OneDrive.lnk" /s /f /q
+                    )
+                    if exist "%SystemDrive%\Windows\ServiceProfiles\LocalService\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\OneDrive.lnk" (
+                        del "%SystemDrive%\Windows\ServiceProfiles\LocalService\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\OneDrive.lnk" /s /f /q
+                    )
+                    if exist "%SystemDrive%\Windows\ServiceProfiles\NetworkService\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\OneDrive.lnk" (
+                        del "%SystemDrive%\Windows\ServiceProfiles\NetworkService\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\OneDrive.lnk" /s /f /q
+                    )
+              - function: RunPowerShell
+                parameters:
+                  code: |-
+                    Set-Location "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace"  
+                    Get-ChildItem | ForEach-Object {Get-ItemProperty $_.pspath} | ForEach-Object {  
+                        $leftnavNodeName = $_."(default)";  
+                    if (($leftnavNodeName -eq "OneDrive") -Or ($leftnavNodeName -eq "OneDrive - Personal")) {  
+                            if (Test-Path $_.pspath) {
+                                Write-Host "Deleting $($_.pspath)."
+                                Remove-Item $_.pspath;
+                            }
+                        }
+                    }
+          - name: Block OneDrive usage
             recommend: strict
+            docs: |-
+              This script prevents [1]:
+
+              - Keeping OneDrive files in sync with the cloud.
+              - Users from automatically uploading photos and videos from the camera roll folder.
+              - Users from accessing OneDrive from the OneDrive app and file picker.
+              - Windows Store apps from accessing OneDrive using the WinRT API.
+              - OneDrive from appearing in the navigation pane in File Explorer.
+
+              Setting `DisableFileSyncNGSC` group policy prevents OneDrive from working on both Windows 10 and 11 [1] [2].
+              Windows 8 uses older `DisableFileSync` key [3].
+
+              These policies do not exist by default in clean installations.
+
+              [1]: https://admx.help/?Category=Windows_10_2016&Policy=Microsoft.Policies.OneDrive::PreventOnedriveFileSync "Prevent the usage of OneDrive for file storage | admx.help"
+              [2]: https://support.microsoft.com/en-us/office/onedrive-won-t-start-0c158fa6-0cd8-4373-98c8-9179e24f10f2 "OneDrive won't start | support.microsoft.com"
+              [3]: https://admx.help/?Category=Windows_10_2016&Policy=Microsoft.Policies.OneDrive::PreventOnedriveFileSyncForBlue "Prevent the usage of OneDrive for file storage on Windows 8.1 | admx.help"
             code: |-
               reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\OneDrive" /t REG_DWORD /v "DisableFileSyncNGSC" /d 1 /f
               reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\OneDrive" /t REG_DWORD /v "DisableFileSync" /d 1 /f
             revertCode: |-
-              reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\OneDrive" /t REG_DWORD /v "DisableFileSyncNGSC" /d 0 /f
-              reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\OneDrive" /t REG_DWORD /v "DisableFileSync" /d 0 /f
-          - name: Prevent automatic OneDrive install for current user
+              reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\OneDrive" /v "DisableFileSyncNGSC" /f 2>nul
+              reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\OneDrive" /v "DisableFileSync" /f 2>nul
+          - name: Prevent automatic OneDrive installation
+            docs: |-
+              Windows 10 comes with `OneDriveSetup` entry in startup for automatic reinstallations even though
+              OneDrive is uninstalled. This entry is missing in Windows 11 by default.
+
+              `OneDriveSetup` is registered to reinstall OneDrive and can be removed using registry [1],
+              as recommended by Microsoft for optimizing Windows VDIs [1].
+
+              [1]: https://learn.microsoft.com/en-us/windows-server/remote/remote-desktop-services/rds_vdi-recommendations-1909#remove-onedrive-components "Optimizing Windows 10, version 1909, for a Virtual Desktop Infrastructure (VDI) role | Microsoft Learn"
             recommend: strict
-            code: reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v "OneDriveSetup" /f
-            revertCode: |-
-              if %PROCESSOR_ARCHITECTURE%==x86 (
-                  reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /V "OneDriveSetup" /t REG_SZ /d " %SystemRoot%\System32\OneDriveSetup.exe /silent" /f
-              ) else (
-                  reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /V "OneDriveSetup" /t REG_SZ /d "%SystemRoot%\SysWOW64\OneDriveSetup.exe /silent" /f
-              )
-          - name: Prevent automatic OneDrive install for new users
+            call:
+              function: RunPowerShell
+              parameters:
+                code: reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v "OneDriveSetup" /f 2>$null
+                revertCode: |-
+                  function Test-IsWindows11 { ($osVersion.Major -gt 10) -or (($osVersion.Major -eq 10) -and ($osVersion.Build -ge 22000)) }
+                  if (Test-IsWindows11) {
+                      Write-Host 'Skipping, no action needed on Windows 11.'
+                  } else {
+                      if([Environment]::Is64BitOperatingSystem) {
+                          reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /V "OneDriveSetup" /t REG_SZ /d "%SystemRoot%\SysWOW64\OneDriveSetup.exe /silent" /f
+                      } else {
+                          reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /V "OneDriveSetup" /t REG_SZ /d "%SystemRoot%\System32\OneDriveSetup.exe /silent" /f
+                      }
+                  }
+          - name: Remove OneDrive folder from File Explorer
             recommend: strict
+            docs: |-
+              File Explorer shows OneDrive to allow you to access files stored in OneDrive (stored online and locally cached) [1].
+
+              [CLSID](https://learn.microsoft.com/en-us/windows/win32/com/clsid-key-hklm) for OneDrive is `018D5C66-4533-4307-9B53-224DE2ED1FE6` [2] for
+              both Windows 10 and 11. Changing pinning option for this key removed OneDrive from navigation file in File explorer [2].
+
+              This CLSID includes `System.IsPinnedToNameSpaceTree` as value as `1` after clean installation in both Windows 10 and Windows 11. 
+
+              [1]: https://support.microsoft.com/en-us/office/sync-files-with-onedrive-in-windows-615391c4-2bd3-4aae-a42a-858262e42a49 "Sync files with OneDrive in Windows | support.microsoft.com"
+              [2]: https://answers.microsoft.com/en-us/windows/forum/all/remove-onedrive-from-file-explorer-navigation-pane/38ac7524-2b35-4ffc-baab-40ad61dc5d79 "Remove OneDrive from File Explorer navigation pane - Microsoft Community | answers.microsoft.com"
             code: |-
-              reg load "HKU\Default" "%SystemDrive%\Users\Default\NTUSER.DAT" 
-              reg delete "HKU\Default\software\Microsoft\Windows\CurrentVersion\Run" /v "OneDriveSetup" /f
-              reg unload "HKU\Default"
+              reg add "HKCR\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" /v "System.IsPinnedToNameSpaceTree" /d "0" /t REG_DWORD /f
+              reg add "HKCR\Wow6432Node\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" /v "System.IsPinnedToNameSpaceTree" /d "0" /t REG_DWORD /f
             revertCode: |-
-              reg load "HKU\Default" "%SystemDrive%\Users\Default\NTUSER.DAT"
-              if %PROCESSOR_ARCHITECTURE%==x86 (
-                  reg add "HKU\Default\software\Microsoft\Windows\CurrentVersion\Run" /V "OneDriveSetup" /t REG_SZ /d " %SystemRoot%\System32\OneDriveSetup.exe /silent" /f
-              ) else (
-                  reg add "HKU\Default\software\Microsoft\Windows\CurrentVersion\Run" /V "OneDriveSetup" /t REG_SZ /d "%SystemRoot%\SysWOW64\OneDriveSetup.exe /silent" /f
-              )
-              reg unload "HKU\Default"
-          - name: Remove OneDrive from explorer menu
+              reg add "HKCR\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" /v "System.IsPinnedToNameSpaceTree" /d "1" /t REG_DWORD /f
+              reg add "HKCR\Wow6432Node\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" /v "System.IsPinnedToNameSpaceTree" /d "1" /t REG_DWORD /f
+          - name: Disable OneDrive scheduled tasks
+            docs: |-
+              Scheduled tasks for OneDrive handle maintainence tasks such as auto-updates and data reporting.
+              These tasks are left intact even after successful uninstall.
+
+              Windows 10 and 11 comes with two tasks named:
+              1. `OneDrive Standalone Update Task`
+              2. `OneDrive Reporting Task`
+
+              Both tasks are enabled by default. They are not documented officially either on Microsoft's website
+              or inside Task Scheduler itself through any description. But one could find these tasks by running:
+              `Get-ScheduledTask 'OneDrive *' |  Select -ExpandProperty TaskName`.
+
+              The tasks are named accordingly:
+
+              - OneDrive Reporting Task-S-1-5-21-994346235-3805487047-77196597-500
+              - OneDrive Standalone Update Task-S-1-5-21-994346235-3805487047-77196597-500
+              - OneDrive Standalone Update Task-S-1-5-21-2040720125-3302134200-1644992326-500
+
+              The SID number (after `-`) changes per installation. SID of user accounts always start with `S-1-5-21` [1]
+              so these are users. You can see all user accounts by running `wmic useraccount get Name,sid`, and you will
+              find out that the first SID used belongs to your account (can verify using `whoami /user`). The other SID
+              used does not belong to any user account even though it starts with `S-1-5-21`. It may be caused by
+              `sysprep` behavior where it will use different SID for scheduled tasks to avoid duplication [2].
+
+              Third SID is unpredictable but also impossible to disable. Disabling using `schtasks` would result in:
+              `schtasks : ERROR: Catastrophic failure`. You can try using:
+
+              ```ps1
+                  $tasks=$(
+                      Get-ScheduledTask 'OneDrive Reporting Task-*'
+                      Get-ScheduledTask 'OneDrive Standalone Update Task-*'
+                  )
+                  foreach ($task in $tasks) {
+                      $fullPath = $task.TaskPath + $task.TaskName
+                      Write-Host "Disabling `"$fullPath`""
+                      schtasks /Change /TN "$fullPath" /DISABLE
+                  }
+              ```
+
+              Even disabling this using Task Scheduler UI shows "Catastrophic failure (Exception from HRESULT: 0x80000FFF (E_UNEXPECTED))".
+
+              Disabling tasks with user SID works fine, you can test it using (run as .bat file, not directly on terminal):
+
+              ```batchfile
+                  @echo off
+                  for /f "tokens=1,2 delims==" %%s IN ('wmic path win32_useraccount where name^='%username%' get sid /value ^| find /i "SID"') do (
+                      set "User_SID=%%t"
+                  )
+                  schtasks /Change /TN "\OneDrive Standalone Update Task-%User_SID%" /DISABLE
+                  schtasks /Change /TN "\OneDrive Reporting Task-%User_SID%" /DISABLE
+              ```
+
+              Deleting tasks works fine so this script will delete all these tasks instead.
+
+              [1]: https://renenyffenegger.ch/notes/Windows/security/SID/index "Windows security identifiers (SID) | renenyffenegger.ch"
+              [2]: https://en.wikipedia.org/w/index.php?title=Windows_Task_Scheduler&oldid=1086196699#Bugs "Windows Task Scheduler - Wikipedia | wikipedia.rg"
             recommend: strict
-            code: |-
-              reg delete "HKCR\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" /f
-              reg delete "HKCR\Wow6432Node\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" /f
-              reg add "HKCR\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" /v System.IsPinnedToNameSpaceTree /d "0" /t REG_DWORD /f
-              reg add "HKCR\Wow6432Node\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" /v System.IsPinnedToNameSpaceTree /d "0" /t REG_DWORD /f
-            revertCode: |-
-              reg add "HKCR\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" /v System.IsPinnedToNameSpaceTree /d "1" /t REG_DWORD /f
-              reg add "HKCR\Wow6432Node\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" /v System.IsPinnedToNameSpaceTree /d "1" /t REG_DWORD /f
-          - name: Delete all OneDrive related Services
+            call:
+              function: RunPowerShell
+              parameters:
+                code: |-
+                  $tasks=$(
+                      Get-ScheduledTask 'OneDrive Reporting Task-*'
+                      Get-ScheduledTask 'OneDrive Standalone Update Task-*'
+                  )
+                  if($tasks.Length -eq 0) {
+                      Write-Host 'Skipping, no OneDrive tasks exists.'
+                  } else {
+                      Write-Host "Total found OneDrive tasks: $($tasks.Length)."
+                      foreach ($task in $tasks) {
+                          $fullPath = $task.TaskPath + $task.TaskName
+                          Write-Host "Deleting `"$fullPath`""
+                          schtasks /DELETE /TN "$fullPath" /f
+                      }
+                  }
+          - name: Delete OneDrive environment variable
             recommend: strict
-            code: for /f "tokens=1 delims=," %%x in ('schtasks /query /fo csv ^| find "OneDrive"') do schtasks /Delete /TN %%x /F
-          - name: Delete OneDrive path from registry
-            recommend: strict
-            docs: https://stackoverflow.com/questions/46744840/export-registry-value-to-file-and-then-set-a-variable-in-batch
-            code: reg delete "HKCU\Environment" /v "OneDrive" /f
+            docs: |-
+              Since Windows 10 1809, Microsoft introduced `%OneDrive%` environment variable to
+              reach OneDrive through an alias [1]. This variable is redundant when OneDrive is
+              undesired.
+
+              This script deletes `OneDrive` environment variable [2].
+
+              `OneDrive` key at `HKCU\Environment` is found on both Windows 10 and Windows 11.
+
+              [1]: https://superuser.com/a/1397495 "Determine OneDrive synchronisation folders - Super User | superuser.com"
+              [2]: https://stackoverflow.com/questions/46744840/export-registry-value-to-file-and-then-set-a-variable-in-batch "Export registry value to file and then set a variable in Batch - Stack Overflow | stackoverflow.com"
+            code: reg delete "HKCU\Environment" /v "OneDrive" /f 2>nul
       - name: Uninstall Edge (chromium-based)
         call:
           function: RunPowerShell
@@ -5477,6 +6029,53 @@ actions:
                   function: UninstallCapability
                   parameters:
                     capabilityName: XPS.Viewer
+      - category: Remove Widgets
+        docs: |-
+          Windows 11 adds a new taskbar flyout named "Widgets", which displays a panel with Microsoft Start, a news aggregator
+          with personalized stories and content (expanding upon the "news and interests" panel introduced in later builds of Windows 10) [1]. 
+          It's rebranding/future version of older "Windows 10 News and Interests" feature [2].
+          The user can customize the panel by adding or removing widgets, rearranging, resizing, and personalizing the content [1].
+
+          It has privacy implications as it collects data about your usage of the computer such as diagnostics data [3]. 
+
+          [1]: https://en.wikipedia.org/wiki/Features_new_to_Windows_11#Windows_shell "Features new to Windows 11 | Wikipedia"
+          [2]: https://www.bleepingcomputer.com/news/microsoft/windows-10-news-and-interests-enabled-for-everyone-in-latest-update/ "Windows 10 News and Interests enabled for everyone in latest update | Bleeping Computer"
+          [3]: https://support.microsoft.com/en-us/windows/stay-up-to-date-with-widgets-7ba79aaa-dac6-4687-b460-ad16a06be6e4 "What data does Microsoft collect? | Widgets | Microsoft"
+        children:
+          - name: Unpin Widgets from taskbar
+            docs: |-
+              To control whether the Widgets button is visible on the taskbar, Microsoft introduced `TaskbarDa` registry value [1].
+              Possible `DWORD` 32-bit settings for the `TaskbarDa` value are [1] [2]:
+
+              1. 0 = Hidden
+              2. 1 = Visible
+
+              This registry key does not exist in Windows 11 installations by default.
+
+              [1]: https://www.elevenforum.com/t/add-or-remove-widgets-button-on-taskbar-in-windows-11.32/ " Add or Remove Widgets Button on Taskbar in Windows 11 | Windows Eleven Forum"
+              [2]: https://www.bleepingcomputer.com/news/microsoft/new-windows-11-registry-hacks-to-customize-your-device/ "New Windows 11 registry hacks to customize your device | Bleeping Computer"
+            recommend: strict
+            code: reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "TaskbarDa" /t REG_DWORD /d "0" /f
+            revertCode: reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "TaskbarDa" /f 2>nul
+          - name: Uninstall Windows Web Experience Pack (breaks Widgets)
+            recommend: strict
+            docs: |-
+              Windows Web Experience Pack is a store app that enables Widgets feature [1].
+              The app is not needed and not known to break other OS functionality if you do not wish to use Widgets feature.
+
+              This app is known to collect diagnostics data, individual widgets might also collect data [2].
+
+              See its [Windows Store Page](https://apps.microsoft.com/store/detail/windows-web-experience-pack/9MSSGKG348SP).
+              It requires you to agree with Microsoft's general privacy terms, see [privacy agreement](http://go.microsoft.com/fwlink/?LinkID=521839) [3].
+              The agreement allows Microsoft to collect your personal data [3].
+
+              [1]: https://support.microsoft.com/en-us/windows/how-to-update-the-windows-web-experience-pack-in-the-microsoft-store-a16c9bf1-f042-4dc9-a523-740cca1e1e60 "How to update the Windows Web Experience Pack in the Microsoft Store | support.microsoft.com"
+              [2]: https://apps.microsoft.com/store/detail/windows-web-experience-pack/9MSSGKG348SP "Windows Web Experience Pack - Microsoft Store Apps | apps.microsoft.com/store"
+              [3]: https://support.microsoft.com/en-us/windows/stay-up-to-date-with-widgets-7ba79aaa-dac6-4687-b460-ad16a06be6e4 "Stay up to date with widgets | support.microsoft.com"
+            call:
+              function: UninstallStoreApp
+              parameters:
+                packageName: MicrosoftWindows.Client.WebExperience
       - name: Remove Meet Now icon from taskbar
         recommend: strict
         docs: # Skype feature, introduced in 20H2, KB4580364 update
@@ -5534,6 +6133,30 @@ actions:
           copy "%~dpnx0" "%AppData%\Microsoft\Windows\Start Menu\Programs\Startup\privacy-cleanup.bat"
         revertCode: del /f /q %AppData%\Microsoft\Windows\Start Menu\Programs\Startup\privacy-cleanup.bat
 functions:
+  - name: KillProcess
+    parameters:
+      - name: processName
+      - name: processStartPath
+      - name: processStartArgs
+    # `start` command is used to start processes without blocking execution of rest of the script, see https://ss64.com/nt/start.html.
+    code: |-
+      tasklist /fi "ImageName eq {{ $processName }}" /fo csv 2>NUL | find /i "{{ $processName }}">NUL && (
+          echo {{ $processName }} is running and will be killed.
+          taskkill /f /im {{ $processName }}
+      ) || (
+          echo Skipping, {{ $processName }} is not running.
+      )
+    revertCode: |-
+      tasklist /fi "ImageName eq {{ $processName }}" /fo csv 2>NUL | find /i "{{ $processName }}">NUL && (
+          echo Skipping, {{ $processName }} is already running.
+      ) || (
+          if exist "{{ $processStartPath }}" (
+              start "" "{{ $processStartPath }}" {{ with $processStartArgs }}{{ . }}{{ end }}
+              echo Executed {{ $processStartPath }} {{ with $processStartArgs }}{{ . }}{{ end }}
+          ) else (
+              echo Failed to run the file, it does not exist. 1>&2
+          )
+      )
   - name: KillProcessWhenItStarts
     parameters:
       - name: processName
@@ -5682,7 +6305,7 @@ functions:
   - name: DisablePerUserService
     parameters:
       - name: serviceName
-      - name: defaultStartupMode  # Alowed values: Boot | System | Automatic | Manual
+      - name: defaultStartupMode # Alowed values: Boot | System | Automatic | Manual
     # More about per-user services: https://docs.microsoft.com/en-us/windows/application-management/per-user-services-in-windows
     call:
       - # System-wide variant: every per-user service has also system-wide counterpart with same default startup mode
