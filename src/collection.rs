@@ -3,6 +3,7 @@ use std::{fs::File, io, path::Path};
 use regex::{Captures, Regex};
 use reqwest::{blocking::get, IntoUrl};
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 use crate::{
     util::{beautify, parse_start_end, piper},
@@ -44,32 +45,17 @@ pub struct CollectionData {
 }
 
 /// Emitted when reading [`CollectionData`] from file fails
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum CollectionError {
     /// Refer to [`io::Error`]
-    IOError(io::Error),
+    #[error(transparent)]
+    IOError(#[from] io::Error),
     /// Refer to [`serde_yaml::Error`]
-    SerdeError(serde_yaml::Error),
+    #[error(transparent)]
+    SerdeError(#[from] serde_yaml::Error),
     /// Refer to [`reqwest::Error`]
-    ReqwestError(reqwest::Error),
-}
-
-impl From<io::Error> for CollectionError {
-    fn from(err: io::Error) -> Self {
-        Self::IOError(err)
-    }
-}
-
-impl From<serde_yaml::Error> for CollectionError {
-    fn from(err: serde_yaml::Error) -> Self {
-        Self::SerdeError(err)
-    }
-}
-
-impl From<reqwest::Error> for CollectionError {
-    fn from(err: reqwest::Error) -> Self {
-        Self::ReqwestError(err)
-    }
+    #[error(transparent)]
+    ReqwestError(#[from] reqwest::Error),
 }
 
 impl CollectionData {
